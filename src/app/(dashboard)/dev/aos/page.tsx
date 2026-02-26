@@ -1,263 +1,145 @@
 'use client';
-
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
-import { StatusBadge } from '@/components/common/StatusBadge';
-import { Send, SendHorizonal, Plus, X } from 'lucide-react';
-import type { DevItem, Developer, DevStatus, SendStatus } from '@/lib/types/database';
-
+import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
+import { Send, Plus, X } from 'lucide-react';
+import type { DevItem, Developer, DevStatus, FixStatus, Priority } from '@/lib/types/database';
 const PLATFORM = 'AOS';
-
-export default function AosDevPage() {
+export default function AosPage() {
   const supabase = createClient();
-  const [items, setItems] = useState<DevItem[]>([]);
+  const [devItems, setDevItems] = useState<DevItem[]>([]);
+  const [bugItems, setBugItems] = useState<any[]>([]);
+  const [commonBugs, setCommonBugs] = useState<any[]>([]);
+  const [serverBugs, setServerBugs] = useState<any[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sending, setSending] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const [activeSection, setActiveSection] = useState<'dev'|'bug'|'common'|'server'>('dev');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string|null>(null);
   const loadData = useCallback(async () => {
-    const [itemsRes, devsRes] = await Promise.all([
-      supabase.from('dev_items').select('*, developers(name)').eq('platform', PLATFORM).order('created_at', { ascending: false }),
-      supabase.from('developers').select('*').eq('is_active', true).in('platform', [PLATFORM, 'COMMON']),
+    setLoading(true);
+    const [d,b,c,s,devs] = await Promise.all([
+      supabase.from('dev_items').select('*, developers(name)').eq('platform',PLATFORM).order('created_at',{ascending:false}),
+      supabase.from('bug_items').select('*, developers(name)').eq('platform',PLATFORM).order('created_at',{ascending:false}),
+      supabase.from('common_bugs').select('*, developers(name)').order('created_at',{ascending:false}),
+      supabase.from('server_bugs').select('*, developers(name)').order('created_at',{ascending:false}),
+      supabase.from('developers').select('*').eq('is_active',true),
     ]);
-    setItems(itemsRes.data || []);
-    setDevelopers(devsRes.data || []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  // Realtime
-  useEffect(() => {
-    const channel = supabase.channel('dev-items-aos')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dev_items', filter: `platform=eq.${PLATFORM}` }, () => loadData())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [loadData]);
-
-  const handleSendSelected = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`${selectedIds.size}건을 AOS 개발방으로 전송할까요?`)) return;
-    setSending(true);
-    try {
-      const res = await fetch('/api/send/dev-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemIds: Array.from(selectedIds), platform: PLATFORM }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(`${data.count}건 전송 완료!`);
-        setSelectedIds(new Set());
-        loadData();
-      } else {
-        alert(`전송 실패: ${data.error}`);
-      }
-    } catch { alert('전송 중 오류 발생'); }
-    setSending(false);
-  };
-
-  const handleSendUnsent = async () => {
-    const unsent = items.filter(i => i.send_status === '미전송');
-    if (unsent.length === 0) { alert('미전송 항목이 없습니다'); return; }
-    if (!confirm(`미전송 ${unsent.length}건을 전체 전송할까요?`)) return;
-    setSending(true);
-    try {
-      const res = await fetch('/api/send/dev-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemIds: unsent.map(i => i.id), platform: PLATFORM }),
-      });
-      const data = await res.json();
-      if (data.success) { alert(`${data.count}건 전송 완료!`); loadData(); }
-      else alert(`전송 실패: ${data.error}`);
-    } catch { alert('전송 중 오류 발생'); }
-    setSending(false);
-  };
-
-  const columns = [
-    { key: 'version', label: '버전', width: 'w-20', sortable: true },
-    { key: 'menu_item', label: '항목', sortable: true, render: (item: DevItem) => (
-      <button onClick={() => setEditId(item.id)} className="text-blue-600 hover:underline font-medium text-left">{item.menu_item}</button>
-    )},
-    { key: 'description', label: '상세설명', width: 'max-w-xs', render: (item: DevItem) => (
-      <span className="text-gray-500 text-xs line-clamp-2">{item.description || '-'}</span>
-    )},
-    { key: 'is_required', label: '필수', width: 'w-14', render: (item: DevItem) => (
-      item.is_required ? <span className="text-xs font-medium text-blue-600">필수</span> : <span className="text-xs text-gray-400">-</span>
-    )},
-    { key: 'department', label: '부서', width: 'w-20', sortable: true },
-    { key: 'requester', label: '담당자', width: 'w-20' },
-    { key: 'developer', label: '개발담당', width: 'w-20', render: (item: DevItem) => item.developers?.name || <span className="text-gray-300">미배정</span> },
-    { key: 'dev_status', label: '개발결과', width: 'w-24', sortable: true, render: (item: DevItem) => <StatusBadge status={item.dev_status} type="dev" /> },
-    { key: 'send_status', label: '전송', width: 'w-20', sortable: true, render: (item: DevItem) => <StatusBadge status={item.send_status} type="send" /> },
+    setDevItems(d.data||[]); setBugItems(b.data||[]); setCommonBugs(c.data||[]); setServerBugs(s.data||[]);
+    setDevelopers(devs.data||[]); setLoading(false);
+  },[]);
+  useEffect(()=>{loadData();},[loadData]);
+  const sections = [
+    {key:'dev' as const,label:'개발항목',count:devItems.length,bg:'bg-blue-600'},
+    {key:'bug' as const,label:'앱 오류',count:bugItems.length,bg:'bg-red-500'},
+    {key:'common' as const,label:'공통 오류',count:commonBugs.length,bg:'bg-orange-500'},
+    {key:'server' as const,label:'서버 오류',count:serverBugs.length,bg:'bg-purple-500'},
   ];
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-gray-900">AOS 개발항목</h1>
-        <button onClick={() => { setEditId(null); setShowForm(true); }}
-          className="flex items-center gap-1.5 bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-          <Plus size={16}/> 항목 추가
-        </button>
-      </div>
-
-      <DataTable
-        data={items}
-        columns={columns}
-        selectable
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        searchKeys={['menu_item', 'description', 'department', 'requester']}
-        searchPlaceholder="항목명, 설명, 부서 검색..."
-        emptyMessage={loading ? '로딩 중...' : '등록된 개발항목이 없습니다'}
-        toolbar={
-          <div className="flex items-center gap-2">
-            <button onClick={handleSendSelected} disabled={selectedIds.size === 0 || sending}
-              className="flex items-center gap-1.5 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              <Send size={13}/> 선택 전송 {selectedIds.size > 0 && `(${selectedIds.size})`}
-            </button>
-            <button onClick={handleSendUnsent} disabled={sending}
-              className="flex items-center gap-1.5 bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-gray-800 disabled:opacity-40 transition-colors">
-              <SendHorizonal size={13}/> 미전송 전체 전송
-            </button>
-          </div>
-        }
-      />
-
-      {/* Form Modal */}
-      {(showForm || editId) && (
-        <ItemFormModal
-          supabase={supabase}
-          developers={developers}
-          editId={editId}
-          platform={PLATFORM}
-          onClose={() => { setShowForm(false); setEditId(null); }}
-          onSaved={() => { setShowForm(false); setEditId(null); loadData(); }}
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── Item Form Modal ───
-function ItemFormModal({ supabase, developers, editId, platform, onClose, onSaved }: {
-  supabase: any; developers: Developer[]; editId: string | null; platform: string;
-  onClose: () => void; onSaved: () => void;
-}) {
-  const [form, setForm] = useState({
-    version: '', menu_item: '', description: '', is_required: false,
-    department: '', requester: '', developer_id: '', dev_status: '대기' as DevStatus, note: '',
-    planning_link: '',
-  });
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (editId) {
-      supabase.from('dev_items').select('*').eq('id', editId).single().then(({ data }: any) => {
-        if (data) setForm({
-          version: data.version || '', menu_item: data.menu_item || '', description: data.description || '',
-          is_required: data.is_required || false, department: data.department || '', requester: data.requester || '',
-          developer_id: data.developer_id || '', dev_status: data.dev_status || '대기', note: data.note || '',
-          planning_link: data.planning_link || '',
-        });
-      });
-    }
-  }, [editId]);
-
-  const handleSave = async () => {
-    if (!form.menu_item.trim()) { alert('항목명을 입력하세요'); return; }
-    setSaving(true);
-    const payload = { ...form, platform, developer_id: form.developer_id || null };
-
-    if (editId) {
-      await supabase.from('dev_items').update(payload).eq('id', editId);
-    } else {
-      await supabase.from('dev_items').insert(payload);
-    }
-    setSaving(false);
-    onSaved();
+  const devCols = [
+    {key:'version',label:'버전',width:'w-20',sortable:true},
+    {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>{setEditId(i.id);setShowForm(true);}} className="text-blue-600 hover:underline font-medium text-left">{i.menu_item}</button>},
+    {key:'description',label:'상세설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-2">{i.description||'-'}</span>},
+    {key:'is_required',label:'필수',width:'w-14',render:(i:any)=>i.is_required?<span className="text-xs font-medium text-blue-600">필수</span>:<span className="text-xs text-gray-400">-</span>},
+    {key:'department',label:'부서',width:'w-20',sortable:true},
+    {key:'requester',label:'담당자',width:'w-20'},
+    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">미배정</span>},
+    {key:'dev_status',label:'개발결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
+    {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
+  ];
+  const bugCols = [
+    {key:'version',label:'버전',width:'w-20',sortable:true},
+    {key:'priority',label:'우선순위',width:'w-20',sortable:true,render:(i:any)=><PriorityTag priority={i.priority}/>},
+    {key:'location',label:'이슈 위치',sortable:true,render:(i:any)=><button onClick={()=>{setEditId(i.id);setShowForm(true);}} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>},
+    {key:'description',label:'상세설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-2">{i.description||'-'}</span>},
+    {key:'reporter',label:'보고자',width:'w-20'},
+    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">미배정</span>},
+    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
+    {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
+  ];
+  const curData = activeSection==='dev'?devItems:activeSection==='bug'?bugItems:activeSection==='common'?commonBugs:serverBugs;
+  const curCols = activeSection==='dev'?devCols:bugCols;
+  const curTable = activeSection==='dev'?'dev_items':activeSection==='bug'?'bug_items':activeSection==='common'?'common_bugs':'server_bugs';
+  const handleSend = async()=>{
+    if(selectedIds.size===0)return;
+    if(!confirm(`${selectedIds.size}건을 전송할까요?`))return;
+    const ep = activeSection==='dev'?'/api/send/dev-items':'/api/send/bug-items';
+    await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({itemIds:Array.from(selectedIds),platform:PLATFORM})});
+    alert('전송 완료!'); setSelectedIds(new Set()); loadData();
   };
-
-  const handleDelete = async () => {
-    if (!editId || !confirm('이 항목을 삭제할까요?')) return;
-    await supabase.from('dev_items').delete().eq('id', editId);
-    onSaved();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-bold text-gray-900">{editId ? '항목 수정' : '새 항목 추가'}</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg"><X size={18}/></button>
-        </div>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="버전" value={form.version} onChange={v => setForm(f => ({ ...f, version: v }))} placeholder="V51.0.3" />
-            <Field label="항목명 *" value={form.menu_item} onChange={v => setForm(f => ({ ...f, menu_item: v }))} placeholder="UFC 비교탭 활성화" />
-          </div>
-          <Field label="상세설명" value={form.description} onChange={v => setForm(f => ({ ...f, description: v }))} multiline placeholder="개발 상세 내용..." />
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="부서" value={form.department} onChange={v => setForm(f => ({ ...f, department: v }))} placeholder="전략기획" />
-            <Field label="담당자" value={form.requester} onChange={v => setForm(f => ({ ...f, requester: v }))} placeholder="이재규" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">개발담당자</label>
-              <select value={form.developer_id} onChange={e => setForm(f => ({ ...f, developer_id: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">미배정</option>
-                {developers.map(d => <option key={d.id} value={d.id}>{d.name} ({d.platform})</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">개발결과</label>
-              <select value={form.dev_status} onChange={e => setForm(f => ({ ...f, dev_status: e.target.value as DevStatus }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                {['대기','개발중','개발완료','검수요청','보류'].map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.is_required} onChange={e => setForm(f => ({ ...f, is_required: e.target.checked }))}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-            필수 개발 항목
-          </label>
-          <Field label="기획 링크" value={form.planning_link} onChange={v => setForm(f => ({ ...f, planning_link: v }))} placeholder="https://..." />
-          <Field label="비고" value={form.note} onChange={v => setForm(f => ({ ...f, note: v }))} multiline placeholder="참고사항..." />
-        </div>
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-          {editId ? <button onClick={handleDelete} className="text-red-500 text-sm hover:underline">삭제</button> : <div/>}
-          <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
-            <button onClick={handleSave} disabled={saving}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-              {saving ? '저장 중...' : editId ? '수정' : '추가'}
-            </button>
-          </div>
-        </div>
-      </div>
+  const openAdd=()=>{setEditId(null);setShowForm(true);};
+  const closeForm=()=>{setShowForm(false);setEditId(null);};
+  const afterSave=()=>{closeForm();loadData();};
+  const handleDel=async()=>{if(!editId||!confirm('삭제?'))return;await supabase.from(curTable).delete().eq('id',editId);afterSave();};
+  return (<div>
+    <div className="flex items-center justify-between mb-4">
+      <h1 className="text-xl font-bold text-gray-900">AOS</h1>
+      <button onClick={openAdd} className="flex items-center gap-1.5 bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700"><Plus size={16}/>{activeSection==='dev'?'항목 추가':'오류 추가'}</button>
     </div>
-  );
-}
-
-function Field({ label, value, onChange, placeholder, multiline }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; multiline?: boolean;
-}) {
-  const cls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent";
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      {multiline
-        ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={3} className={cls} />
-        : <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={cls} />
-      }
+    <div className="flex gap-2 mb-4 flex-wrap">
+      {sections.map(s=>(<button key={s.key} onClick={()=>{setActiveSection(s.key);setSelectedIds(new Set());}}
+        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${activeSection===s.key?s.bg+' text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+        {s.label} <span className="ml-1 opacity-70">({s.count})</span></button>))}
     </div>
-  );
+    <DataTable data={curData as any[]} columns={curCols as any} selectable selectedIds={selectedIds} onSelectionChange={setSelectedIds}
+      searchKeys={activeSection==='dev'?['menu_item','description','department']:['location','description','reporter']}
+      searchPlaceholder="검색..." emptyMessage={loading?'로딩 중...':'데이터 없음'}
+      toolbar={<button onClick={handleSend} disabled={selectedIds.size===0} className="flex items-center gap-1.5 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-40"><Send size={13}/>선택 전송{selectedIds.size>0&&` (${selectedIds.size})`}</button>}/>
+    {showForm&&(activeSection==='dev'?
+      <DevForm supabase={supabase} devs={developers} editId={editId} platform={PLATFORM} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>:
+      <BugForm supabase={supabase} devs={developers} editId={editId} table={curTable} defPlatform={activeSection==='bug'?PLATFORM:undefined} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>
+    )}
+  </div>);
 }
+function DevForm({supabase,devs,editId,platform,onClose,onSaved,onDel}:any){
+  const [f,sf]=useState({version:'',menu_item:'',description:'',is_required:false,department:'',requester:'',developer_id:'',dev_status:'대기' as DevStatus,note:''});
+  const [saving,setSaving]=useState(false);
+  useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_id:data.developer_id||'',dev_status:data.dev_status||'대기',note:data.note||''});});},[editId]);
+  const save=async()=>{if(!f.menu_item.trim()){alert('항목명 입력');return;}setSaving(true);const p={...f,platform,developer_id:f.developer_id||null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else await supabase.from('dev_items').insert(p);setSaving(false);onSaved();};
+  return(<Modal title={editId?'항목 수정':'새 항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
+    <div className="grid grid-cols-2 gap-4"><Inp l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} ph="V51.0.3"/><Inp l="항목명 *" v={f.menu_item} c={v=>sf(p=>({...p,menu_item:v}))}/></div>
+    <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
+    <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={v=>sf(p=>({...p,department:v}))}/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
+    <div className="grid grid-cols-2 gap-4">
+      <Sel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} opts={[{v:'',l:'미배정'},...devs.map((d:any)=>({v:d.id,l:d.name}))]}/>
+      <Sel l="개발결과" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
+    </div>
+    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="rounded"/>필수</label>
+    <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
+  </div><Foot editId={editId} onDel={onDel} onClose={onClose} onSave={save} saving={saving}/></Modal>);
+}
+function BugForm({supabase,devs,editId,table,defPlatform,onClose,onSaved,onDel}:any){
+  const [f,sf]=useState({platform:defPlatform||'AOS',version:'',location:'',description:'',priority:'보통' as Priority,department:'',reporter:'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
+  const [saving,setSaving]=useState(false);
+  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||defPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',note:data.note||''});});},[editId]);
+  const save=async()=>{if(!f.location.trim()){alert('위치 입력');return;}setSaving(true);const p:any={...f,developer_id:f.developer_id||null};if(table==='common_bugs'||table==='server_bugs')delete p.platform;if(editId)await supabase.from(table).update(p).eq('id',editId);else await supabase.from(table).insert(p);setSaving(false);onSaved();};
+  return(<Modal title={editId?'오류 수정':'새 오류 추가'} onClose={onClose}><div className="p-6 space-y-4">
+    <div className="grid grid-cols-2 gap-4">
+      {defPlatform?<Inp l="플랫폼" v={defPlatform} c={()=>{}}/>:<Sel l="플랫폼" v={f.platform} c={v=>sf(p=>({...p,platform:v}))} opts={[{v:'AOS',l:'AOS'},{v:'iOS',l:'iOS'}]}/>}
+      <Inp l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} ph="V51.0.3"/>
+    </div>
+    <Inp l="이슈 위치 *" v={f.location} c={v=>sf(p=>({...p,location:v}))}/>
+    <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
+    <div className="grid grid-cols-2 gap-4">
+      <Sel l="우선순위" v={f.priority} c={v=>sf(p=>({...p,priority:v as Priority}))} opts={['긴급','높음','보통','낮음'].map(s=>({v:s,l:s}))}/>
+      <Inp l="보고자" v={f.reporter} c={v=>sf(p=>({...p,reporter:v}))}/>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <Sel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} opts={[{v:'',l:'미배정'},...devs.map((d:any)=>({v:d.id,l:d.name}))]}/>
+      <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
+    </div>
+    <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
+  </div><Foot editId={editId} onDel={onDel} onClose={onClose} onSave={save} saving={saving}/></Modal>);
+}
+function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return(
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+    <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold">{title}</h2><button onClick={onClose}><X size={18}/></button></div>{children}</div></div>);}
+function Foot({editId,onDel,onClose,onSave,saving}:any){return(
+  <div className="flex justify-between px-6 py-4 border-t">{editId?<button onClick={onDel} className="text-red-500 text-sm">삭제</button>:<div/>}
+    <div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600">취소</button><button onClick={onSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>);}
+function Inp({l,v,c,ph,multi}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean}){
+  const cls="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+  return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls}/>}</div>);}
+function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(
+  <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
