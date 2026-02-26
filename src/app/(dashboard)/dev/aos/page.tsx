@@ -1,44 +1,81 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
-import { Send, Plus, X } from 'lucide-react';
+import { Send, Plus, X, ArrowRightLeft } from 'lucide-react';
+import { useVersion } from '@/components/layout/Header';
 import type { DevItem, Developer, DevStatus, FixStatus, Priority } from '@/lib/types/database';
+
 const PLATFORM = 'AOS';
+
 export default function AosPage() {
   const supabase = createClient();
-  const [devItems, setDevItems] = useState<DevItem[]>([]);
-  const [bugItems, setBugItems] = useState<any[]>([]);
-  const [commonBugs, setCommonBugs] = useState<any[]>([]);
-  const [serverBugs, setServerBugs] = useState<any[]>([]);
+  const { aosVersion: selectedVer, aosVersions: allVersions } = useVersion();
+  const [allDevItems, setAllDevItems] = useState<any[]>([]);
+  const [allBugItems, setAllBugItems] = useState<any[]>([]);
+  const [allCommonBugs, setAllCommonBugs] = useState<any[]>([]);
+  const [allServerBugs, setAllServerBugs] = useState<any[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<'dev'|'bug'|'common'|'server'>('dev');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string|null>(null);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     const [d,b,c,s,devs] = await Promise.all([
-      supabase.from('dev_items').select('*, developers(name)').eq('platform',PLATFORM).order('created_at',{ascending:false}),
-      supabase.from('bug_items').select('*, developers(name)').eq('platform',PLATFORM).order('created_at',{ascending:false}),
+      supabase.from('dev_items').select('*, developers(name)').eq('platform', PLATFORM).order('created_at',{ascending:false}),
+      supabase.from('bug_items').select('*, developers(name)').eq('platform', PLATFORM).order('created_at',{ascending:false}),
       supabase.from('common_bugs').select('*, developers(name)').order('created_at',{ascending:false}),
       supabase.from('server_bugs').select('*, developers(name)').order('created_at',{ascending:false}),
       supabase.from('developers').select('*').eq('is_active',true),
     ]);
-    setDevItems(d.data||[]); setBugItems(b.data||[]); setCommonBugs(c.data||[]); setServerBugs(s.data||[]);
+    setAllDevItems(d.data||[]); setAllBugItems(b.data||[]); setAllCommonBugs(c.data||[]); setAllServerBugs(s.data||[]);
     setDevelopers(devs.data||[]); setLoading(false);
   },[]);
+
   useEffect(()=>{loadData();},[loadData]);
+
+  // 버전 필터링 + 이월 로직
+  const filterByVersion = useCallback((items: any[], statusField: string) => {
+    if (!selectedVer) return items;
+    // 해당 버전에 등록된 항목
+    const thisVersion = items.filter(i => i.version === selectedVer);
+    // 이전 버전의 미완료 항목 (이월)
+    const versionOrder = allVersions.map(v => v.version);
+    const curIdx = versionOrder.indexOf(selectedVer);
+    const prevVersions = curIdx >= 0 ? versionOrder.slice(curIdx + 1) : []; // 이전 버전들 (newer first이므로 뒤가 older)
+
+    const incompleteStatuses = statusField === 'dev_status' ? ['대기','개발중','보류','검수요청'] : ['미수정','수정중','보류'];
+    const carriedOver = items.filter(i =>
+      prevVersions.includes(i.version) && incompleteStatuses.includes(i[statusField])
+    ).map(i => ({ ...i, _carriedOver: true, _originalVersion: i.version }));
+
+    return [...thisVersion, ...carriedOver];
+  }, [selectedVer, allVersions]);
+
+  const devItems = useMemo(() => filterByVersion(allDevItems, 'dev_status'), [allDevItems, filterByVersion]);
+  const bugItems = useMemo(() => filterByVersion(allBugItems, 'fix_status'), [allBugItems, filterByVersion]);
+  const commonBugs = useMemo(() => filterByVersion(allCommonBugs, 'fix_status'), [allCommonBugs, filterByVersion]);
+  const serverBugs = useMemo(() => filterByVersion(allServerBugs, 'fix_status'), [allServerBugs, filterByVersion]);
+
   const sections = [
-    {key:'dev' as const,label:'개발항목',count:devItems.length,bg:'bg-blue-600'},
-    {key:'bug' as const,label:'앱 오류',count:bugItems.length,bg:'bg-red-500'},
-    {key:'common' as const,label:'공통 오류',count:commonBugs.length,bg:'bg-orange-500'},
-    {key:'server' as const,label:'서버 오류',count:serverBugs.length,bg:'bg-purple-500'},
+    {key:'dev' as const, label:'개발항목', count:devItems.length, bg:'bg-blue-600'},
+    {key:'bug' as const, label:'앱 오류', count:bugItems.length, bg:'bg-red-500'},
+    {key:'common' as const, label:'공통 오류', count:commonBugs.length, bg:'bg-orange-500'},
+    {key:'server' as const, label:'서버 오류', count:serverBugs.length, bg:'bg-purple-500'},
   ];
+
+  const CarriedBadge = ({item}:{item:any}) => item._carriedOver ? (
+    <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium" title={`${item._originalVersion}에서 이월`}>
+      <ArrowRightLeft size={10}/> 이월 ({item._originalVersion})
+    </span>
+  ) : null;
+
   const devCols = [
-    {key:'version',label:'버전',width:'w-20',sortable:true},
+    {key:'version',label:'버전',width:'w-24',sortable:true, render:(i:any)=><div className="flex items-center gap-1"><span>{i.version}</span><CarriedBadge item={i}/></div>},
     {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>{setEditId(i.id);setShowForm(true);}} className="text-blue-600 hover:underline font-medium text-left">{i.menu_item}</button>},
     {key:'description',label:'상세설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-2">{i.description||'-'}</span>},
     {key:'is_required',label:'필수',width:'w-14',render:(i:any)=>i.is_required?<span className="text-xs font-medium text-blue-600">필수</span>:<span className="text-xs text-gray-400">-</span>},
@@ -48,8 +85,9 @@ export default function AosPage() {
     {key:'dev_status',label:'개발결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
     {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
+
   const bugCols = [
-    {key:'version',label:'버전',width:'w-20',sortable:true},
+    {key:'version',label:'버전',width:'w-24',sortable:true, render:(i:any)=><div className="flex items-center gap-1"><span>{i.version}</span><CarriedBadge item={i}/></div>},
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'이슈 위치',sortable:true,render:(i:any)=><button onClick={()=>{setEditId(i.id);setShowForm(true);}} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>},
     {key:'description',label:'상세설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-2">{i.description||'-'}</span>},
@@ -58,23 +96,29 @@ export default function AosPage() {
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
+
   const curData = activeSection==='dev'?devItems:activeSection==='bug'?bugItems:activeSection==='common'?commonBugs:serverBugs;
   const curCols = activeSection==='dev'?devCols:bugCols;
   const curTable = activeSection==='dev'?'dev_items':activeSection==='bug'?'bug_items':activeSection==='common'?'common_bugs':'server_bugs';
+
   const handleSend = async()=>{
     if(selectedIds.size===0)return;
     if(!confirm(`${selectedIds.size}건을 전송할까요?`))return;
-    const ep = activeSection==='dev'?'/api/send/dev-items':'/api/send/bug-items';
-    await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({itemIds:Array.from(selectedIds),platform:PLATFORM})});
+    await fetch(activeSection==='dev'?'/api/send/dev-items':'/api/send/bug-items',
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({itemIds:Array.from(selectedIds),platform:PLATFORM})});
     alert('전송 완료!'); setSelectedIds(new Set()); loadData();
   };
   const openAdd=()=>{setEditId(null);setShowForm(true);};
   const closeForm=()=>{setShowForm(false);setEditId(null);};
   const afterSave=()=>{closeForm();loadData();};
   const handleDel=async()=>{if(!editId||!confirm('삭제?'))return;await supabase.from(curTable).delete().eq('id',editId);afterSave();};
+
   return (<div>
     <div className="flex items-center justify-between mb-4">
-      <h1 className="text-xl font-bold text-gray-900">AOS</h1>
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">AOS</h1>
+        {selectedVer && <p className="text-xs text-gray-500 mt-0.5">현재 버전: {selectedVer}</p>}
+      </div>
       <button onClick={openAdd} className="flex items-center gap-1.5 bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700"><Plus size={16}/>{activeSection==='dev'?'항목 추가':'오류 추가'}</button>
     </div>
     <div className="flex gap-2 mb-4 flex-wrap">
@@ -87,13 +131,14 @@ export default function AosPage() {
       searchPlaceholder="검색..." emptyMessage={loading?'로딩 중...':'데이터 없음'}
       toolbar={<button onClick={handleSend} disabled={selectedIds.size===0} className="flex items-center gap-1.5 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-40"><Send size={13}/>선택 전송{selectedIds.size>0&&` (${selectedIds.size})`}</button>}/>
     {showForm&&(activeSection==='dev'?
-      <DevForm supabase={supabase} devs={developers} editId={editId} platform={PLATFORM} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>:
-      <BugForm supabase={supabase} devs={developers} editId={editId} table={curTable} defPlatform={activeSection==='bug'?PLATFORM:undefined} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>
+      <DevForm supabase={supabase} devs={developers} editId={editId} platform={PLATFORM} defaultVersion={selectedVer} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>:
+      <BugForm supabase={supabase} devs={developers} editId={editId} table={curTable} defPlatform={activeSection==='bug'?PLATFORM:undefined} defaultVersion={selectedVer} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>
     )}
   </div>);
 }
-function DevForm({supabase,devs,editId,platform,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({version:'',menu_item:'',description:'',is_required:false,department:'',requester:'',developer_id:'',dev_status:'대기' as DevStatus,note:''});
+
+function DevForm({supabase,devs,editId,platform,defaultVersion,onClose,onSaved,onDel}:any){
+  const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:'',requester:'',developer_id:'',dev_status:'대기' as DevStatus,note:''});
   const [saving,setSaving]=useState(false);
   useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_id:data.developer_id||'',dev_status:data.dev_status||'대기',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.menu_item.trim()){alert('항목명 입력');return;}setSaving(true);const p={...f,platform,developer_id:f.developer_id||null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else await supabase.from('dev_items').insert(p);setSaving(false);onSaved();};
@@ -109,8 +154,9 @@ function DevForm({supabase,devs,editId,platform,onClose,onSaved,onDel}:any){
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={onDel} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
-function BugForm({supabase,devs,editId,table,defPlatform,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({platform:defPlatform||'AOS',version:'',location:'',description:'',priority:'보통' as Priority,department:'',reporter:'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
+
+function BugForm({supabase,devs,editId,table,defPlatform,defaultVersion,onClose,onSaved,onDel}:any){
+  const [f,sf]=useState({platform:defPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:'',reporter:'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
   const [saving,setSaving]=useState(false);
   useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||defPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.location.trim()){alert('위치 입력');return;}setSaving(true);const p:any={...f,developer_id:f.developer_id||null};if(table==='common_bugs'||table==='server_bugs')delete p.platform;if(editId)await supabase.from(table).update(p).eq('id',editId);else await supabase.from(table).insert(p);setSaving(false);onSaved();};
@@ -132,6 +178,7 @@ function BugForm({supabase,devs,editId,table,defPlatform,onClose,onSaved,onDel}:
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={onDel} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
+
 function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return(
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
     <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold">{title}</h2><button onClick={onClose}><X size={18}/></button></div>{children}</div></div>);}

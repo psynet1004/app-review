@@ -51,7 +51,7 @@ function BugModal({supabase,devs,editId,table,onClose,onSaved,onDel}:any){
   useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.location.trim()){alert('위치 입력');return;}setSaving(true);const p={...f,developer_id:f.developer_id||null};if(editId)await supabase.from(table).update(p).eq('id',editId);else await supabase.from(table).insert(p);setSaving(false);onSaved();};
   return(<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
-    <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold">{editId?'수정':'추가'}</h2><button onClick={onClose}><X size={18}/></button></div>
+    <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold">{editId?'오류 수정':'오류 추가'}</h2><button onClick={onClose}><X size={18}/></button></div>
     <div className="p-6 space-y-4">
       <Inp l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} ph="V51.0.3"/>
       <Inp l="이슈 위치 *" v={f.location} c={v=>sf(p=>({...p,location:v}))}/>
@@ -64,6 +64,7 @@ function BugModal({supabase,devs,editId,table,onClose,onSaved,onDel}:any){
         <Sel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} opts={[{v:'',l:'미배정'},...devs.map((d:any)=>({v:d.id,l:d.name}))]}/>
         <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
       </div>
+      <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
     </div>
     <div className="flex justify-between px-6 py-4 border-t">{editId?<button onClick={onDel} className="text-red-500 text-sm">삭제</button>:<div/>}<div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600">취소</button><button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>
   </div></div>);
