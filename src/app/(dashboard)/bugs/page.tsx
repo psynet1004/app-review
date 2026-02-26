@@ -71,7 +71,7 @@ export default function BugsPage() {
 
   const columns = [
     { key: 'platform', label: '플랫폼', width: 'w-16', sortable: true, render: (i: BugItem) => (
-      <span className={`text-xs font-medium ${i.platform === 'AOS' ? 'text-green-600' : i.platform === 'iOS' ? 'text-blue-600' : 'text-purple-600'}`}>{i.platform}</span>
+      <span className={`text-xs font-medium ${i.platform === 'AOS' ? 'text-green-600' : 'text-blue-600'}`}>{i.platform}</span>
     )},
     { key: 'priority', label: '우선순위', width: 'w-20', sortable: true, render: (i: BugItem) => <PriorityTag priority={i.priority} /> },
     { key: 'location', label: '이슈 위치', sortable: true, render: (i: BugItem) => (
@@ -89,7 +89,7 @@ export default function BugsPage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-gray-900">앱 오류사항</h1>
         <div className="flex items-center gap-2">
-          {['ALL','AOS','iOS','COMMON'].map(p => (
+          {['ALL','AOS','iOS'].map(p => (
             <button key={p} onClick={() => setPlatformFilter(p)}
               className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${platformFilter === p ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {p === 'ALL' ? '전체' : p}
@@ -181,7 +181,7 @@ function BugFormModal({ supabase, developers, editId, onClose, onSaved }: {
               <label className="block text-xs font-medium text-gray-600 mb-1">플랫폼 *</label>
               <select value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value as any }))}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                {['AOS','iOS','COMMON'].map(p => <option key={p} value={p}>{p}</option>)}
+                {['AOS','iOS'].map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <Field label="버전" value={form.version} onChange={v => setForm(f => ({ ...f, version: v }))} placeholder="V51.0.3" />
