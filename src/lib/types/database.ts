@@ -1,6 +1,7 @@
 export type Platform = 'AOS' | 'iOS' | 'SERVER' | 'COMMON';
 export type DevStatus = '대기' | '개발중' | '개발완료' | '검수요청' | '보류';
 export type FixStatus = '미수정' | '수정중' | '수정완료' | '보류';
+export type ReviewStatus = '검수전' | '검수중' | '검수완료';
 export type Priority = '긴급' | '높음' | '보통' | '낮음';
 export type SendStatus = '미전송' | '전송완료' | '재전송';
 export type SendType = '개발항목' | '앱오류' | '공통오류' | '서버오류';
@@ -43,7 +44,6 @@ export interface DevItem {
   created_by: string;
   created_at: string;
   updated_at: string;
-  // joined
   developers?: Developer;
 }
 
@@ -58,6 +58,7 @@ export interface BugItem {
   reporter: string;
   developer_id: string | null;
   fix_status: FixStatus;
+  review_status: ReviewStatus;
   review_results: Record<string, boolean>;
   send_status: SendStatus;
   note: string;
@@ -77,6 +78,7 @@ export interface CommonBug {
   reporter: string;
   developer_id: string | null;
   fix_status: FixStatus;
+  review_status: ReviewStatus;
   review_results: Record<string, boolean>;
   send_status: SendStatus;
   note: string;
@@ -96,6 +98,7 @@ export interface ServerBug {
   reporter: string;
   developer_id: string | null;
   fix_status: FixStatus;
+  review_status: ReviewStatus;
   review_results: Record<string, boolean>;
   send_status: SendStatus;
   note: string;

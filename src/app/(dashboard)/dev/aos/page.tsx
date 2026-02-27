@@ -5,7 +5,7 @@ import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
 import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { useVersion } from '@/components/layout/Header';
-import type { DevStatus, FixStatus, Priority } from '@/lib/types/database';
+import type { DevStatus, FixStatus, Priority, ReviewStatus } from '@/lib/types/database';
 
 const PLATFORM = 'AOS';
 
@@ -36,7 +36,6 @@ export default function AosPage() {
 
   useEffect(()=>{loadData();},[loadData]);
 
-  // 개발담당 = 개발팀 + 서버팀만
   const devTeam = useMemo(()=>developers.filter(d=>
     ['개발팀','서버(백앤드)','서버(시스템)'].includes(d.department)
   ),[developers]);
@@ -76,16 +75,36 @@ export default function AosPage() {
   const [selCommon, setSelCommon] = useState<Set<string>>(new Set());
   const [selServer, setSelServer] = useState<Set<string>>(new Set());
 
-  // 개발담당 이름 표시 (developer_id가 배열일 수 있음)
   const getDevNames = (item:any) => {
     if (!item.developer_id) return <span className="text-gray-300">-</span>;
-    // 단일 ID인 경우
     if (typeof item.developer_id === 'string') {
       const dev = developers.find(d=>d.id===item.developer_id);
       return dev ? dev.name : <span className="text-gray-300">-</span>;
     }
     return item.developers?.name || <span className="text-gray-300">-</span>;
   };
+
+  // 검수상태 인라인 변경
+  const handleReviewChange = async(table:string, id:string, val:ReviewStatus) => {
+    await supabase.from(table).update({review_status:val}).eq('id',id);
+    loadData();
+  };
+
+  const ReviewSel = ({item,table}:{item:any;table:string}) => {
+    if(item.fix_status!=='수정완료') return <span className="text-gray-300 text-xs">-</span>;
+    return(
+      <select value={item.review_status||'검수전'} onChange={e=>handleReviewChange(table,item.id,e.target.value as ReviewStatus)}
+        className="text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-400"
+        onClick={e=>e.stopPropagation()}>
+        <option value="검수전">검수전</option>
+        <option value="검수중">검수중</option>
+        <option value="검수완료">검수완료</option>
+      </select>
+    );
+  };
+
+  // 취소선 적용 여부
+  const isReviewed = (item:any) => item.fix_status==='수정완료' && item.review_status==='검수완료';
 
   const devCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
@@ -101,15 +120,24 @@ export default function AosPage() {
   const bugCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,render:(i:any)=><PriorityTag priority={i.priority}/>},
-    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>},
-    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-1">{i.description||'-'}</span>},
+    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-gray-500 text-xs line-clamp-1 ${isReviewed(i)?'line-through':''}`}>{i.description||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-24',render:(i:any)=>getDevNames(i)},
-    {key:'fix_status',label:'상태',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
+    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
+    {key:'review_status',label:'검수',width:'w-24',render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
     {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
 
-  const commonCols = bugCols.map(c=>c.key==='location'?{...c,render:(i:any)=><button onClick={()=>setShowForm({type:'common',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>}:c);
-  const serverCols = bugCols.map(c=>c.key==='location'?{...c,render:(i:any)=><button onClick={()=>setShowForm({type:'server',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>}:c);
+  const commonCols = bugCols.map(c=>{
+    if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'common',id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>};
+    if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="common_bugs"/>};
+    return c;
+  });
+  const serverCols = bugCols.map(c=>{
+    if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'server',id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>};
+    if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="server_bugs"/>};
+    return c;
+  });
 
   const handleSend = async(type:'dev'|'bug'|'common'|'server', ids:Set<string>)=>{
     if(ids.size===0)return;
@@ -199,11 +227,11 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
   const save=async()=>{if(!f.menu_item.trim()){alert('항목명 필수');return;}ss(true);const p={...f,platform,developer_id:f.developer_id||null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else await supabase.from('dev_items').insert(p);ss(false);onSaved();};
   return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
-      <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList}/>
+      <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVersion}/>
       <Inp l="항목명 *" v={f.menu_item} c={v=>sf(p=>({...p,menu_item:v}))}/>
     </div>
     <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
-    <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={v=>sf(p=>({...p,department:v}))}/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
+    <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={v=>sf(p=>({...p,department:v}))} disabled/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
     <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devTeam}/>
     <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="rounded"/>필수 항목</label>
@@ -213,10 +241,10 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
 
 /* ============ BugForm ============ */
 function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({platform:hasPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
+  const [f,sf]=useState({platform:hasPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_id:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId){sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));};},[userName,userDept,editId]);
-  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||hasPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',note:data.note||''});});},[editId]);
+  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||hasPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.location.trim()){alert('위치 필수');return;}ss(true);const p:any={...f,developer_id:f.developer_id||null};
     if(table!=='bug_items')delete p.platform;
     if(table==='bug_items'&&hasPlatform)p.platform=hasPlatform;
@@ -226,7 +254,7 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
       {hasPlatform?<Inp l="플랫폼" v={hasPlatform} c={()=>{}} disabled/>:
        table==='bug_items'?<Sel l="플랫폼" v={f.platform} c={v=>sf(p=>({...p,platform:v}))} opts={[{v:'AOS',l:'AOS'},{v:'iOS',l:'iOS'}]}/>:
        <Inp l="유형" v={table==='common_bugs'?'공통 오류':'서버 오류'} c={()=>{}} disabled/>}
-      <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList}/>
+      <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVersion}/>
     </div>
     <Inp l="이슈 위치 *" v={f.location} c={v=>sf(p=>({...p,location:v}))}/>
     <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
@@ -238,6 +266,9 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
       <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devTeam}/>
       <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
     </div>
+    {f.fix_status==='수정완료'&&(
+      <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>
+    )}
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
@@ -254,19 +285,28 @@ function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?
   return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls} disabled={disabled}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls} disabled={disabled}/>}</div>);}
 function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(
   <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
-function VerSel({l,v,c,versions}:{l:string;v:string;c:(v:string)=>void;versions:string[]}){return(
-  <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-    <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-      {v && !versions.includes(v) && <option value={v}>{v}</option>}
-      {versions.map(ver=><option key={ver} value={ver}>{ver}</option>)}
-    </select></div>);}
 
-/* ============ DevSel - 개발담당 (AOS/iOS/서버 그룹핑, 단일선택) ============ */
+/* ============ VerSel - 버전 선택 (현재 버전 우선 + 더보기) ============ */
+function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>void;versions:string[];defaultVer?:string}){
+  const [showAll,setShowAll]=useState(false);
+  const mainVer = defaultVer || versions[0] || '';
+  const otherVers = versions.filter(ver=>ver!==mainVer);
+  return(
+    <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
+      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+        {mainVer && <option value={mainVer}>{mainVer} (현재)</option>}
+        {v && v!==mainVer && !versions.includes(v) && <option value={v}>{v}</option>}
+        {otherVers.length>0 && <option disabled>── 다른 버전 ──</option>}
+        {otherVers.map(ver=><option key={ver} value={ver}>{ver}</option>)}
+      </select>
+    </div>);}
+
+/* ============ DevSel - 개발담당 (AOS/iOS/서버 그룹 + 그룹선택) ============ */
 function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
-  const groups:{label:string;items:any[]}[] = [
-    {label:'AOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='AOS')},
-    {label:'iOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='iOS')},
-    {label:'서버', items:devs.filter(d=>d.department.startsWith('서버'))},
+  const groups:{label:string;key:string;items:any[]}[] = [
+    {label:'AOS', key:'AOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='AOS')},
+    {label:'iOS', key:'iOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='iOS')},
+    {label:'서버', key:'서버', items:devs.filter(d=>d.department.startsWith('서버'))},
   ].filter(g=>g.items.length>0);
   return(
     <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
@@ -274,6 +314,7 @@ function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
         <option value="">미배정</option>
         {groups.map(g=>(
           <optgroup key={g.label} label={`── ${g.label} ──`}>
+            <option value={`__GROUP__${g.key}`}>⚡ {g.label} 전체</option>
             {g.items.map(d=><option key={d.id} value={d.id}>{d.name} ({d.role})</option>)}
           </optgroup>
         ))}

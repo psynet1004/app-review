@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import type { DevStatus, FixStatus, Priority, SendStatus } from '@/lib/types/database';
+import type { DevStatus, FixStatus, Priority, SendStatus, ReviewStatus } from '@/lib/types/database';
 
 const devStatusColors: Record<DevStatus, string> = {
   '대기': 'bg-gray-100 text-gray-600',
@@ -22,8 +22,14 @@ const sendStatusColors: Record<SendStatus, string> = {
   '재전송': 'bg-amber-100 text-amber-700',
 };
 
-export function StatusBadge({ status, type = 'dev' }: { status: string; type?: 'dev' | 'fix' | 'send' }) {
-  const colors = type === 'dev' ? devStatusColors : type === 'fix' ? fixStatusColors : sendStatusColors;
+const reviewStatusColors: Record<ReviewStatus, string> = {
+  '검수전': 'bg-gray-100 text-gray-500',
+  '검수중': 'bg-yellow-100 text-yellow-700',
+  '검수완료': 'bg-teal-100 text-teal-700',
+};
+
+export function StatusBadge({ status, type = 'dev' }: { status: string; type?: 'dev' | 'fix' | 'send' | 'review' }) {
+  const colors = type === 'dev' ? devStatusColors : type === 'fix' ? fixStatusColors : type === 'review' ? reviewStatusColors : sendStatusColors;
   const color = (colors as Record<string, string>)[status] || 'bg-gray-100 text-gray-600';
 
   return (
