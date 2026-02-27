@@ -3,25 +3,23 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
-import { Send, Plus, X, ArrowRightLeft } from 'lucide-react';
+import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useVersion } from '@/components/layout/Header';
-import type { DevItem, Developer, DevStatus, FixStatus, Priority } from '@/lib/types/database';
+import type { DevStatus, FixStatus, Priority } from '@/lib/types/database';
 
 const PLATFORM = 'AOS';
 
 export default function AosPage() {
   const supabase = createClient();
   const { aosVersion: selectedVer, aosVersions: allVersions } = useVersion();
-  const [allDevItems, setAllDevItems] = useState<any[]>([]);
-  const [allBugItems, setAllBugItems] = useState<any[]>([]);
-  const [allCommonBugs, setAllCommonBugs] = useState<any[]>([]);
-  const [allServerBugs, setAllServerBugs] = useState<any[]>([]);
-  const [developers, setDevelopers] = useState<Developer[]>([]);
+  const [rawDev, setRawDev] = useState<any[]>([]);
+  const [rawBug, setRawBug] = useState<any[]>([]);
+  const [rawCommon, setRawCommon] = useState<any[]>([]);
+  const [rawServer, setRawServer] = useState<any[]>([]);
+  const [developers, setDevelopers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'dev'|'bug'|'common'|'server'>('dev');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string|null>(null);
+  const [showForm, setShowForm] = useState<{type:'dev'|'bug'|'common'|'server';id?:string}|null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string,boolean>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -32,137 +30,190 @@ export default function AosPage() {
       supabase.from('server_bugs').select('*, developers(name)').order('created_at',{ascending:false}),
       supabase.from('developers').select('*').eq('is_active',true),
     ]);
-    setAllDevItems(d.data||[]); setAllBugItems(b.data||[]); setAllCommonBugs(c.data||[]); setAllServerBugs(s.data||[]);
+    setRawDev(d.data||[]); setRawBug(b.data||[]); setRawCommon(c.data||[]); setRawServer(s.data||[]);
     setDevelopers(devs.data||[]); setLoading(false);
   },[]);
 
   useEffect(()=>{loadData();},[loadData]);
 
-  // 버전 필터링 + 이월 로직
-  const filterByVersion = useCallback((items: any[], statusField: string) => {
+  // 이월 필터
+  const filterVer = useCallback((items: any[], statusField: string) => {
     if (!selectedVer) return items;
-    // 해당 버전에 등록된 항목
-    const thisVersion = items.filter(i => i.version === selectedVer);
-    // 이전 버전의 미완료 항목 (이월)
-    const versionOrder = allVersions.map(v => v.version);
-    const curIdx = versionOrder.indexOf(selectedVer);
-    const prevVersions = curIdx >= 0 ? versionOrder.slice(curIdx + 1) : []; // 이전 버전들 (newer first이므로 뒤가 older)
-
-    const incompleteStatuses = statusField === 'dev_status' ? ['대기','개발중','보류','검수요청'] : ['미수정','수정중','보류'];
-    const carriedOver = items.filter(i =>
-      prevVersions.includes(i.version) && incompleteStatuses.includes(i[statusField])
-    ).map(i => ({ ...i, _carriedOver: true, _originalVersion: i.version }));
-
-    return [...thisVersion, ...carriedOver];
+    const thisVer = items.filter(i => i.version === selectedVer);
+    const verList = allVersions.map(v => v.version);
+    const curIdx = verList.indexOf(selectedVer);
+    const olderVers = curIdx >= 0 ? verList.slice(curIdx + 1) : [];
+    const incomplete = statusField === 'dev_status'
+      ? ['대기','개발중','보류','검수요청']
+      : ['미수정','수정중','보류'];
+    const carried = items
+      .filter(i => olderVers.includes(i.version) && incomplete.includes(i[statusField]))
+      .map(i => ({ ...i, _carried: true, _origVer: i.version }));
+    return [...thisVer, ...carried];
   }, [selectedVer, allVersions]);
 
-  const devItems = useMemo(() => filterByVersion(allDevItems, 'dev_status'), [allDevItems, filterByVersion]);
-  const bugItems = useMemo(() => filterByVersion(allBugItems, 'fix_status'), [allBugItems, filterByVersion]);
-  const commonBugs = useMemo(() => filterByVersion(allCommonBugs, 'fix_status'), [allCommonBugs, filterByVersion]);
-  const serverBugs = useMemo(() => filterByVersion(allServerBugs, 'fix_status'), [allServerBugs, filterByVersion]);
+  const devItems = useMemo(() => filterVer(rawDev, 'dev_status'), [rawDev, filterVer]);
+  const bugItems = useMemo(() => filterVer(rawBug, 'fix_status'), [rawBug, filterVer]);
+  const commonItems = useMemo(() => filterVer(rawCommon, 'fix_status'), [rawCommon, filterVer]);
+  const serverItems = useMemo(() => filterVer(rawServer, 'fix_status'), [rawServer, filterVer]);
 
-  const sections = [
-    {key:'dev' as const, label:'개발항목', count:devItems.length, bg:'bg-blue-600'},
-    {key:'bug' as const, label:'앱 오류', count:bugItems.length, bg:'bg-red-500'},
-    {key:'common' as const, label:'공통 오류', count:commonBugs.length, bg:'bg-orange-500'},
-    {key:'server' as const, label:'서버 오류', count:serverBugs.length, bg:'bg-purple-500'},
-  ];
+  const toggle = (k:string) => setCollapsed(p=>({...p,[k]:!p[k]}));
+  const closeForm=()=>setShowForm(null);
+  const afterSave=()=>{closeForm();loadData();};
 
-  const CarriedBadge = ({item}:{item:any}) => item._carriedOver ? (
-    <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium" title={`${item._originalVersion}에서 이월`}>
-      <ArrowRightLeft size={10}/> 이월 ({item._originalVersion})
+  const CarriedBadge = ({item}:{item:any}) => item._carried ? (
+    <span className="inline-flex items-center gap-0.5 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium ml-1" title={`${item._origVer}에서 이월`}>
+      <ArrowRightLeft size={9}/>{item._origVer}
     </span>
   ) : null;
 
+  // 섹션 선택 상태
+  const [selDev, setSelDev] = useState<Set<string>>(new Set());
+  const [selBug, setSelBug] = useState<Set<string>>(new Set());
+  const [selCommon, setSelCommon] = useState<Set<string>>(new Set());
+  const [selServer, setSelServer] = useState<Set<string>>(new Set());
+
   const devCols = [
-    {key:'version',label:'버전',width:'w-24',sortable:true, render:(i:any)=><div className="flex items-center gap-1"><span>{i.version}</span><CarriedBadge item={i}/></div>},
-    {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>{setEditId(i.id);setShowForm(true);}} className="text-blue-600 hover:underline font-medium text-left">{i.menu_item}</button>},
-    {key:'description',label:'상세설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-2">{i.description||'-'}</span>},
-    {key:'is_required',label:'필수',width:'w-14',render:(i:any)=>i.is_required?<span className="text-xs font-medium text-blue-600">필수</span>:<span className="text-xs text-gray-400">-</span>},
-    {key:'department',label:'부서',width:'w-20',sortable:true},
-    {key:'requester',label:'담당자',width:'w-20'},
-    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">미배정</span>},
-    {key:'dev_status',label:'개발결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
+    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
+    {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'dev',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.menu_item}</button>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-1">{i.description||'-'}</span>},
+    {key:'is_required',label:'필수',width:'w-12',render:(i:any)=>i.is_required?<span className="text-xs font-bold text-blue-600">Y</span>:<span className="text-gray-300">-</span>},
+    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">-</span>},
+    {key:'dev_status',label:'상태',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
     {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
 
   const bugCols = [
-    {key:'version',label:'버전',width:'w-24',sortable:true, render:(i:any)=><div className="flex items-center gap-1"><span>{i.version}</span><CarriedBadge item={i}/></div>},
+    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,render:(i:any)=><PriorityTag priority={i.priority}/>},
-    {key:'location',label:'이슈 위치',sortable:true,render:(i:any)=><button onClick={()=>{setEditId(i.id);setShowForm(true);}} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>},
-    {key:'description',label:'상세설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-2">{i.description||'-'}</span>},
-    {key:'reporter',label:'보고자',width:'w-20'},
-    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">미배정</span>},
-    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
+    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-1">{i.description||'-'}</span>},
+    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">-</span>},
+    {key:'fix_status',label:'상태',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
 
-  const curData = activeSection==='dev'?devItems:activeSection==='bug'?bugItems:activeSection==='common'?commonBugs:serverBugs;
-  const curCols = activeSection==='dev'?devCols:bugCols;
-  const curTable = activeSection==='dev'?'dev_items':activeSection==='bug'?'bug_items':activeSection==='common'?'common_bugs':'server_bugs';
+  const commonCols = bugCols.map(c=>c.key==='location'?{...c,render:(i:any)=><button onClick={()=>setShowForm({type:'common',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>}:c);
+  const serverCols = bugCols.map(c=>c.key==='location'?{...c,render:(i:any)=><button onClick={()=>setShowForm({type:'server',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>}:c);
 
-  const handleSend = async()=>{
-    if(selectedIds.size===0)return;
-    if(!confirm(`${selectedIds.size}건을 전송할까요?`))return;
-    await fetch(activeSection==='dev'?'/api/send/dev-items':'/api/send/bug-items',
-      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({itemIds:Array.from(selectedIds),platform:PLATFORM})});
-    alert('전송 완료!'); setSelectedIds(new Set()); loadData();
+  const handleSend = async(type:'dev'|'bug'|'common'|'server', ids:Set<string>)=>{
+    if(ids.size===0)return;
+    if(!confirm(`${ids.size}건을 전송할까요?`))return;
+    const endpoint = type==='dev'?'/api/send/dev-items':'/api/send/bug-items';
+    await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({itemIds:Array.from(ids),platform:PLATFORM})});
+    alert('전송 완료!');
+    if(type==='dev')setSelDev(new Set()); else if(type==='bug')setSelBug(new Set()); else if(type==='common')setSelCommon(new Set()); else setSelServer(new Set());
+    loadData();
   };
-  const openAdd=()=>{setEditId(null);setShowForm(true);};
-  const closeForm=()=>{setShowForm(false);setEditId(null);};
-  const afterSave=()=>{closeForm();loadData();};
-  const handleDel=async()=>{if(!editId||!confirm('삭제?'))return;await supabase.from(curTable).delete().eq('id',editId);afterSave();};
 
-  return (<div>
-    <div className="flex items-center justify-between mb-4">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">AOS</h1>
-        {selectedVer && <p className="text-xs text-gray-500 mt-0.5">현재 버전: {selectedVer}</p>}
+  const handleDel = async(type:string,id:string)=>{
+    if(!confirm('삭제할까요?'))return;
+    const tbl = type==='dev'?'dev_items':type==='bug'?'bug_items':type==='common'?'common_bugs':'server_bugs';
+    await supabase.from(tbl).delete().eq('id',id);
+    afterSave();
+  };
+
+  const SectionHeader = ({title,count,color,sectionKey,onAdd}:{title:string;count:number;color:string;sectionKey:string;onAdd:()=>void}) => (
+    <div className={`flex items-center justify-between py-3 px-4 ${color} rounded-t-xl cursor-pointer select-none`}
+      onClick={()=>toggle(sectionKey)}>
+      <div className="flex items-center gap-2">
+        {collapsed[sectionKey]?<ChevronDown size={16} className="text-white/70"/>:<ChevronUp size={16} className="text-white/70"/>}
+        <h2 className="text-sm font-bold text-white">{title}</h2>
+        <span className="text-xs text-white/70 bg-white/20 px-2 py-0.5 rounded-full">{count}건</span>
       </div>
-      <button onClick={openAdd} className="flex items-center gap-1.5 bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700"><Plus size={16}/>{activeSection==='dev'?'항목 추가':'오류 추가'}</button>
+      <button onClick={(e)=>{e.stopPropagation();onAdd();}} className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition">
+        + 추가
+      </button>
     </div>
-    <div className="flex gap-2 mb-4 flex-wrap">
-      {sections.map(s=>(<button key={s.key} onClick={()=>{setActiveSection(s.key);setSelectedIds(new Set());}}
-        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${activeSection===s.key?s.bg+' text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-        {s.label} <span className="ml-1 opacity-70">({s.count})</span></button>))}
+  );
+
+  const SendBar = ({ids,onSend}:{ids:Set<string>;onSend:()=>void}) => ids.size > 0 ? (
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100">
+      <button onClick={onSend} className="flex items-center gap-1 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-emerald-700">
+        <Send size={12}/>선택 전송 ({ids.size})
+      </button>
     </div>
-    <DataTable data={curData as any[]} columns={curCols as any} selectable selectedIds={selectedIds} onSelectionChange={setSelectedIds}
-      searchKeys={activeSection==='dev'?['menu_item','description','department']:['location','description','reporter']}
-      searchPlaceholder="검색..." emptyMessage={loading?'로딩 중...':'데이터 없음'}
-      toolbar={<button onClick={handleSend} disabled={selectedIds.size===0} className="flex items-center gap-1.5 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-40"><Send size={13}/>선택 전송{selectedIds.size>0&&` (${selectedIds.size})`}</button>}/>
-    {showForm&&(activeSection==='dev'?
-      <DevForm supabase={supabase} devs={developers} editId={editId} platform={PLATFORM} defaultVersion={selectedVer} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>:
-      <BugForm supabase={supabase} devs={developers} editId={editId} table={curTable} defPlatform={activeSection==='bug'?PLATFORM:undefined} defaultVersion={selectedVer} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>
-    )}
+  ) : null;
+
+  return (<div className="space-y-6">
+    <div>
+      <h1 className="text-xl font-bold text-gray-900">AOS</h1>
+      {selectedVer && <p className="text-xs text-gray-500 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
+    </div>
+
+    {/* 개발항목 */}
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
+      <SectionHeader title="📋 개발항목" count={devItems.length} color="bg-blue-600" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
+      {!collapsed.dev && <DataTable data={devItems} columns={devCols} selectable selectedIds={selDev} onSelectionChange={setSelDev}
+        searchKeys={['menu_item','description','department']} searchPlaceholder="개발항목 검색..." emptyMessage={loading?'로딩 중...':'등록된 항목 없음'}
+        toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)}/>}/>}
+    </div>
+
+    {/* 앱 오류 */}
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
+      <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="bg-red-500" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
+      {!collapsed.bug && <DataTable data={bugItems} columns={bugCols} selectable selectedIds={selBug} onSelectionChange={setSelBug}
+        searchKeys={['location','description','reporter']} searchPlaceholder="앱 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
+        toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)}/>}/>}
+    </div>
+
+    {/* 공통 오류 */}
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
+      <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="bg-orange-500" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
+      {!collapsed.common && <DataTable data={commonItems} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
+        searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
+        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)}/>}/>}
+    </div>
+
+    {/* 서버 오류 */}
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
+      <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="bg-purple-500" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
+      {!collapsed.server && <DataTable data={serverItems} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
+        searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
+        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)}/>}/>}
+    </div>
+
+    {/* Forms */}
+    {showForm?.type==='dev'&&<DevForm supabase={supabase} devs={developers} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}
+    {showForm?.type==='bug'&&<BugForm supabase={supabase} devs={developers} editId={showForm.id} table="bug_items" hasPlatform={PLATFORM} defaultVersion={selectedVer} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('bug',id)}/>}
+    {showForm?.type==='common'&&<BugForm supabase={supabase} devs={developers} editId={showForm.id} table="common_bugs" defaultVersion={selectedVer} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('common',id)}/>}
+    {showForm?.type==='server'&&<BugForm supabase={supabase} devs={developers} editId={showForm.id} table="server_bugs" defaultVersion={selectedVer} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('server',id)}/>}
   </div>);
 }
 
+/* ============ DevForm ============ */
 function DevForm({supabase,devs,editId,platform,defaultVersion,onClose,onSaved,onDel}:any){
   const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:'',requester:'',developer_id:'',dev_status:'대기' as DevStatus,note:''});
-  const [saving,setSaving]=useState(false);
+  const [saving,ss]=useState(false);
   useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_id:data.developer_id||'',dev_status:data.dev_status||'대기',note:data.note||''});});},[editId]);
-  const save=async()=>{if(!f.menu_item.trim()){alert('항목명 입력');return;}setSaving(true);const p={...f,platform,developer_id:f.developer_id||null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else await supabase.from('dev_items').insert(p);setSaving(false);onSaved();};
-  return(<Modal title={editId?'항목 수정':'새 항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
+  const save=async()=>{if(!f.menu_item.trim()){alert('항목명 필수');return;}ss(true);const p={...f,platform,developer_id:f.developer_id||null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else await supabase.from('dev_items').insert(p);ss(false);onSaved();};
+  return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4"><Inp l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} ph="V51.0.3"/><Inp l="항목명 *" v={f.menu_item} c={v=>sf(p=>({...p,menu_item:v}))}/></div>
     <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
     <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={v=>sf(p=>({...p,department:v}))}/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
     <div className="grid grid-cols-2 gap-4">
       <Sel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} opts={[{v:'',l:'미배정'},...devs.map((d:any)=>({v:d.id,l:d.name}))]}/>
-      <Sel l="개발결과" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
+      <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
     </div>
-    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="rounded"/>필수</label>
+    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="rounded"/>필수 항목</label>
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
-  </div><Foot editId={editId} onDel={onDel} onClose={onClose} onSave={save} saving={saving}/></Modal>);
+  </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
 
-function BugForm({supabase,devs,editId,table,defPlatform,defaultVersion,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({platform:defPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:'',reporter:'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
-  const [saving,setSaving]=useState(false);
-  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||defPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',note:data.note||''});});},[editId]);
-  const save=async()=>{if(!f.location.trim()){alert('위치 입력');return;}setSaving(true);const p:any={...f,developer_id:f.developer_id||null};if(table==='common_bugs'||table==='server_bugs')delete p.platform;if(editId)await supabase.from(table).update(p).eq('id',editId);else await supabase.from(table).insert(p);setSaving(false);onSaved();};
-  return(<Modal title={editId?'오류 수정':'새 오류 추가'} onClose={onClose}><div className="p-6 space-y-4">
+/* ============ BugForm ============ */
+function BugForm({supabase,devs,editId,table,hasPlatform,defaultVersion,onClose,onSaved,onDel}:any){
+  const [f,sf]=useState({platform:hasPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:'',reporter:'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
+  const [saving,ss]=useState(false);
+  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||hasPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',note:data.note||''});});},[editId]);
+  const save=async()=>{if(!f.location.trim()){alert('위치 필수');return;}ss(true);const p:any={...f,developer_id:f.developer_id||null};
+    if(table!=='bug_items')delete p.platform; // common/server에는 platform 없음
+    if(table==='bug_items'&&hasPlatform)p.platform=hasPlatform;
+    if(editId)await supabase.from(table).update(p).eq('id',editId);else await supabase.from(table).insert(p);ss(false);onSaved();};
+  return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
-      {defPlatform?<Inp l="플랫폼" v={defPlatform} c={()=>{}}/>:<Sel l="플랫폼" v={f.platform} c={v=>sf(p=>({...p,platform:v}))} opts={[{v:'AOS',l:'AOS'},{v:'iOS',l:'iOS'}]}/>}
+      {hasPlatform?<Inp l="플랫폼" v={hasPlatform} c={()=>{}} disabled/>:
+       table==='bug_items'?<Sel l="플랫폼" v={f.platform} c={v=>sf(p=>({...p,platform:v}))} opts={[{v:'AOS',l:'AOS'},{v:'iOS',l:'iOS'}]}/>:
+       <Inp l="유형" v={table==='common_bugs'?'공통 오류':'서버 오류'} c={()=>{}} disabled/>}
       <Inp l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} ph="V51.0.3"/>
     </div>
     <Inp l="이슈 위치 *" v={f.location} c={v=>sf(p=>({...p,location:v}))}/>
@@ -176,17 +227,18 @@ function BugForm({supabase,devs,editId,table,defPlatform,defaultVersion,onClose,
       <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
     </div>
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
-  </div><Foot editId={editId} onDel={onDel} onClose={onClose} onSave={save} saving={saving}/></Modal>);
+  </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
 
+/* ============ Shared UI ============ */
 function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return(
-  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
-    <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold">{title}</h2><button onClick={onClose}><X size={18}/></button></div>{children}</div></div>);}
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+    <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold text-lg">{title}</h2><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>{children}</div></div>);}
 function Foot({editId,onDel,onClose,onSave,saving}:any){return(
-  <div className="flex justify-between px-6 py-4 border-t">{editId?<button onClick={onDel} className="text-red-500 text-sm">삭제</button>:<div/>}
-    <div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600">취소</button><button onClick={onSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>);}
-function Inp({l,v,c,ph,multi}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean}){
-  const cls="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent";
-  return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls}/>}</div>);}
+  <div className="flex justify-between px-6 py-4 border-t bg-gray-50">{editId?<button onClick={onDel} className="text-red-500 hover:text-red-700 text-sm font-medium">삭제</button>:<div/>}
+    <div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button><button onClick={onSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>);}
+function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean;disabled?:boolean}){
+  const cls="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500";
+  return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls} disabled={disabled}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls} disabled={disabled}/>}</div>);}
 function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(
-  <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
+  <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
