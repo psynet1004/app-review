@@ -31,7 +31,7 @@ export default function ServerBugsPage() {
   const handleDel=async(id:string)=>{if(!confirm('삭제?'))return;await supabase.from('server_bugs').delete().eq('id',id);afterSave();};
 
   // 버전 목록 (AOS + iOS 합쳐서 중복 제거)
-  const allVers = [...new Set([...aosVersions.map(v=>v.version), ...iosVersions.map(v=>v.version)])];
+  const allVers = Array.from(new Set(aosVersions.map(v=>v.version).concat(iosVersions.map(v=>v.version))));
 
   const cols = [
     {key:'version',label:'버전',width:'w-20',sortable:true},
