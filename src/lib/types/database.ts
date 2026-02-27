@@ -11,6 +11,7 @@ export interface Developer {
   platform: Platform;
   role: string;
   department: string;
+  email: string;
   is_active: boolean;
   created_at: string;
 }

@@ -11,6 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [versions, setVersions] = useState<AppVersion[]>([]);
   const [aosVersion, setAosVersion] = useState('');
   const [iosVersion, setIosVersion] = useState('');
+  const [userName, setUserName] = useState('');
 
   const loadVersions = useCallback(async () => {
     const { data } = await supabase.from('app_versions').select('*').order('created_at', { ascending: false });
@@ -18,19 +19,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setVersions(vs);
     const aosVs = vs.filter(v => v.platform === 'AOS');
     const iosVs = vs.filter(v => v.platform === 'iOS');
-    // 최초 로드 시에만 기본 버전 설정
     setAosVersion(prev => prev && aosVs.some(v => v.version === prev) ? prev : (aosVs[0]?.version || ''));
     setIosVersion(prev => prev && iosVs.some(v => v.version === prev) ? prev : (iosVs[0]?.version || ''));
   }, []);
 
-  useEffect(() => { loadVersions(); }, [loadVersions]);
+  useEffect(() => {
+    loadVersions();
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user;
+      if (u) setUserName(u.user_metadata?.full_name || u.email || '');
+    });
+  }, [loadVersions]);
 
   return (
     <VersionContext.Provider value={{
       aosVersion, iosVersion, setAosVersion, setIosVersion,
       aosVersions: versions.filter(v => v.platform === 'AOS'),
       iosVersions: versions.filter(v => v.platform === 'iOS'),
-      refreshVersions: loadVersions,
+      refreshVersions: loadVersions, userName,
     }}>
       <div className="flex h-screen bg-gray-50">
         <Sidebar />

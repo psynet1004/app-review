@@ -1,8 +1,13 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
+
   const handleGoogleLogin = async () => {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
@@ -24,6 +29,19 @@ export default function LoginPage() {
           <p className="text-gray-500 text-sm">개발항목 관리 · 오류 추적 · Google Chat 알림</p>
         </div>
 
+        {error === 'unauthorized' && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+            ⚠️ 접근 권한이 없는 계정입니다.<br/>
+            <span className="text-xs text-red-400">사내 @psynet.co.kr 계정으로 로그인하세요.</span>
+          </div>
+        )}
+
+        {error === 'auth' && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-sm text-yellow-700">
+            로그인 중 오류가 발생했습니다. 다시 시도해주세요.
+          </div>
+        )}
+
         <button
           onClick={handleGoogleLogin}
           className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 rounded-xl px-6 py-3.5 text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 transition-all"
@@ -38,9 +56,13 @@ export default function LoginPage() {
         </button>
 
         <p className="text-xs text-gray-400 mt-6">
-          사내 Google Workspace 계정으로 로그인하세요
+          사내 @psynet.co.kr 계정으로 로그인하세요
         </p>
       </div>
     </div>
   );
+}
+
+export default function LoginPage() {
+  return <Suspense><LoginContent /></Suspense>;
 }

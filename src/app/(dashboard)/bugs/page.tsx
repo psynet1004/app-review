@@ -9,7 +9,7 @@ import type { FixStatus, Priority } from '@/lib/types/database';
 
 export default function AppBugsPage() {
   const supabase = createClient();
-  const { aosVersion, iosVersion, aosVersions, iosVersions } = useVersion();
+  const { aosVersion, iosVersion, aosVersions, iosVersions, userName } = useVersion();
   const [rawBugs, setRawBugs] = useState<any[]>([]);
   const [developers, setDevelopers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +73,8 @@ export default function AppBugsPage() {
     </div>
   );
 
+  const getVersionList=(p:'AOS'|'iOS')=>(p==='AOS'?aosVersions:iosVersions).map(v=>v.version);
+
   return(<div className="space-y-6">
     <div><h1 className="text-xl font-bold text-gray-900">앱 오류</h1><p className="text-xs text-gray-500 mt-0.5">AOS / iOS 앱 오류만 표시</p></div>
 
@@ -88,19 +90,22 @@ export default function AppBugsPage() {
         searchKeys={['location','description','reporter']} searchPlaceholder="iOS 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'}/>}
     </div>
 
-    {showForm&&<BugModal supabase={supabase} devs={developers} editId={showForm.id} platform={showForm.platform} defaultVersion={showForm.platform==='AOS'?aosVersion:iosVersion} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>}
+    {showForm&&<BugModal supabase={supabase} devs={developers} editId={showForm.id} platform={showForm.platform}
+      defaultVersion={showForm.platform==='AOS'?aosVersion:iosVersion} versionList={getVersionList(showForm.platform)} userName={userName}
+      onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>}
   </div>);
 }
 
-function BugModal({supabase,devs,editId,platform,defaultVersion,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:'',reporter:'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
+function BugModal({supabase,devs,editId,platform,defaultVersion,versionList,userName,onClose,onSaved,onDel}:any){
+  const [f,sf]=useState({version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:'',reporter:userName||'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
   const [saving,ss]=useState(false);
+  useEffect(()=>{if(!editId&&userName)sf(p=>({...p,reporter:p.reporter||userName}));},[userName,editId]);
   useEffect(()=>{if(editId)supabase.from('bug_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.location.trim()){alert('위치 필수');return;}ss(true);const p={...f,platform,developer_id:f.developer_id||null};if(editId)await supabase.from('bug_items').update(p).eq('id',editId);else await supabase.from('bug_items').insert(p);ss(false);onSaved();};
   return(<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
     <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold text-lg">{editId?'앱 오류 수정':'앱 오류 추가'} ({platform})</h2><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>
     <div className="p-6 space-y-4">
-      <Inp l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} ph="V51.0.3"/>
+      <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList}/>
       <Inp l="이슈 위치 *" v={f.location} c={v=>sf(p=>({...p,location:v}))}/>
       <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
       <div className="grid grid-cols-2 gap-4">
@@ -108,7 +113,7 @@ function BugModal({supabase,devs,editId,platform,defaultVersion,onClose,onSaved,
         <Inp l="보고자" v={f.reporter} c={v=>sf(p=>({...p,reporter:v}))}/>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Sel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} opts={[{v:'',l:'미배정'},...devs.map((d:any)=>({v:d.id,l:d.name}))]}/>
+        <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devs}/>
         <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
       </div>
       <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
@@ -118,3 +123,19 @@ function BugModal({supabase,devs,editId,platform,defaultVersion,onClose,onSaved,
 }
 function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean;disabled?:boolean}){const cls="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100";return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls} disabled={disabled}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls} disabled={disabled}/>}</div>);}
 function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
+function VerSel({l,v,c,versions}:{l:string;v:string;c:(v:string)=>void;versions:string[]}){return(
+  <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
+    <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 appearance-none bg-white bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_0.75rem_center]">
+      {v && !versions.includes(v) && <option value={v}>{v}</option>}
+      {versions.map(ver=><option key={ver} value={ver}>{ver}</option>)}
+    </select></div>);}
+function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
+  const groups: Record<string,any[]> = {};
+  devs.forEach(d => { const dept = d.department || '기타'; if (!groups[dept]) groups[dept] = []; groups[dept].push(d); });
+  const order = ['개발팀','AIAE','운영','서버(백앤드)','서버(시스템)','중계','기획팀','데이터/광고','재무'];
+  const sorted = order.filter(k => groups[k]).concat(Object.keys(groups).filter(k => !order.includes(k)));
+  return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
+    <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+      <option value="">미배정</option>
+      {sorted.map(dept=>(<optgroup key={dept} label={`── ${dept} ──`}>{groups[dept].map((d:any)=><option key={d.id} value={d.id}>{d.name} ({d.role})</option>)}</optgroup>))}
+    </select></div>);}

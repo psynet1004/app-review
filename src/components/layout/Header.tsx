@@ -1,7 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState, createContext, useContext, useCallback } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 import { LogOut, User, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { AppVersion } from '@/lib/types/database';
@@ -11,7 +11,8 @@ export const VersionContext = createContext<{
   setAosVersion: (v: string) => void; setIosVersion: (v: string) => void;
   aosVersions: AppVersion[]; iosVersions: AppVersion[];
   refreshVersions: () => void;
-}>({ aosVersion:'', iosVersion:'', setAosVersion:()=>{}, setIosVersion:()=>{}, aosVersions:[], iosVersions:[], refreshVersions:()=>{} });
+  userName: string;
+}>({ aosVersion:'', iosVersion:'', setAosVersion:()=>{}, setIosVersion:()=>{}, aosVersions:[], iosVersions:[], refreshVersions:()=>{}, userName:'' });
 
 export function useVersion() { return useContext(VersionContext); }
 
