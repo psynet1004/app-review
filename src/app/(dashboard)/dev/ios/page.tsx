@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
-import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { useVersion } from '@/components/layout/Header';
 import type { DevStatus, FixStatus, Priority } from '@/lib/types/database';
 
@@ -11,7 +11,7 @@ const PLATFORM = 'iOS';
 
 export default function IosPage() {
   const supabase = createClient();
-  const { iosVersion: selectedVer, iosVersions: allVersions, userName } = useVersion();
+  const { iosVersion: selectedVer, iosVersions: allVersions, userName, userDept } = useVersion();
   const [rawDev, setRawDev] = useState<any[]>([]);
   const [rawBug, setRawBug] = useState<any[]>([]);
   const [rawCommon, setRawCommon] = useState<any[]>([]);
@@ -35,6 +35,11 @@ export default function IosPage() {
   },[]);
 
   useEffect(()=>{loadData();},[loadData]);
+
+  // 개발담당 = 개발팀 + 서버팀만
+  const devTeam = useMemo(()=>developers.filter(d=>
+    ['개발팀','서버(백앤드)','서버(시스템)'].includes(d.department)
+  ),[developers]);
 
   const filterVer = useCallback((items: any[], statusField: string) => {
     if (!selectedVer) return items;
@@ -71,12 +76,24 @@ export default function IosPage() {
   const [selCommon, setSelCommon] = useState<Set<string>>(new Set());
   const [selServer, setSelServer] = useState<Set<string>>(new Set());
 
+  // 개발담당 이름 표시 (developer_id가 배열일 수 있음)
+  const getDevNames = (item:any) => {
+    if (!item.developer_id) return <span className="text-gray-300">-</span>;
+    // 단일 ID인 경우
+    if (typeof item.developer_id === 'string') {
+      const dev = developers.find(d=>d.id===item.developer_id);
+      return dev ? dev.name : <span className="text-gray-300">-</span>;
+    }
+    return item.developers?.name || <span className="text-gray-300">-</span>;
+  };
+
   const devCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
     {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'dev',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.menu_item}</button>},
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-1">{i.description||'-'}</span>},
     {key:'is_required',label:'필수',width:'w-12',render:(i:any)=>i.is_required?<span className="text-xs font-bold text-blue-600">Y</span>:<span className="text-gray-300">-</span>},
-    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">-</span>},
+    {key:'department',label:'부서',width:'w-16',render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
+    {key:'developer',label:'개발담당',width:'w-24',render:(i:any)=>getDevNames(i)},
     {key:'dev_status',label:'상태',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
     {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
@@ -86,7 +103,7 @@ export default function IosPage() {
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.location}</button>},
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-1">{i.description||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">-</span>},
+    {key:'developer',label:'개발담당',width:'w-24',render:(i:any)=>getDevNames(i)},
     {key:'fix_status',label:'상태',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
@@ -130,7 +147,6 @@ export default function IosPage() {
     </div>
   ) : null;
 
-  // 버전 목록 (드롭다운용)
   const versionList = allVersions.map(v => v.version);
 
   return (<div className="space-y-6">
@@ -167,18 +183,18 @@ export default function IosPage() {
         toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)}/>}/>}
     </div>
 
-    {showForm?.type==='dev'&&<DevForm supabase={supabase} devs={developers} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}
-    {showForm?.type==='bug'&&<BugForm supabase={supabase} devs={developers} editId={showForm.id} table="bug_items" hasPlatform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('bug',id)}/>}
-    {showForm?.type==='common'&&<BugForm supabase={supabase} devs={developers} editId={showForm.id} table="common_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('common',id)}/>}
-    {showForm?.type==='server'&&<BugForm supabase={supabase} devs={developers} editId={showForm.id} table="server_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('server',id)}/>}
+    {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}
+    {showForm?.type==='bug'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="bug_items" hasPlatform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('bug',id)}/>}
+    {showForm?.type==='common'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="common_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('common',id)}/>}
+    {showForm?.type==='server'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="server_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('server',id)}/>}
   </div>);
 }
 
 /* ============ DevForm ============ */
-function DevForm({supabase,devs,editId,platform,defaultVersion,versionList,userName,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:'',requester:userName||'',developer_id:'',dev_status:'대기' as DevStatus,note:''});
+function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
+  const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_id:'',dev_status:'대기' as DevStatus,note:''});
   const [saving,ss]=useState(false);
-  useEffect(()=>{if(!editId&&userName)sf(p=>({...p,requester:p.requester||userName}));},[userName,editId]);
+  useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));};},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_id:data.developer_id||'',dev_status:data.dev_status||'대기',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.menu_item.trim()){alert('항목명 필수');return;}ss(true);const p={...f,platform,developer_id:f.developer_id||null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else await supabase.from('dev_items').insert(p);ss(false);onSaved();};
   return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
@@ -188,20 +204,18 @@ function DevForm({supabase,devs,editId,platform,defaultVersion,versionList,userN
     </div>
     <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
     <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={v=>sf(p=>({...p,department:v}))}/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
-    <div className="grid grid-cols-2 gap-4">
-      <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devs}/>
-      <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
-    </div>
+    <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devTeam}/>
+    <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="rounded"/>필수 항목</label>
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
 
 /* ============ BugForm ============ */
-function BugForm({supabase,devs,editId,table,hasPlatform,defaultVersion,versionList,userName,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({platform:hasPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:'',reporter:userName||'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
+function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
+  const [f,sf]=useState({platform:hasPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_id:'',fix_status:'미수정' as FixStatus,note:''});
   const [saving,ss]=useState(false);
-  useEffect(()=>{if(!editId&&userName)sf(p=>({...p,reporter:p.reporter||userName}));},[userName,editId]);
+  useEffect(()=>{if(!editId){sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));};},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||hasPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.location.trim()){alert('위치 필수');return;}ss(true);const p:any={...f,developer_id:f.developer_id||null};
     if(table!=='bug_items')delete p.platform;
@@ -221,7 +235,7 @@ function BugForm({supabase,devs,editId,table,hasPlatform,defaultVersion,versionL
       <Inp l="보고자" v={f.reporter} c={v=>sf(p=>({...p,reporter:v}))}/>
     </div>
     <div className="grid grid-cols-2 gap-4">
-      <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devs}/>
+      <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devTeam}/>
       <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
     </div>
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
@@ -242,28 +256,25 @@ function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l
   <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
 function VerSel({l,v,c,versions}:{l:string;v:string;c:(v:string)=>void;versions:string[]}){return(
   <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-    <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 appearance-none bg-white bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_0.75rem_center]">
+    <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
       {v && !versions.includes(v) && <option value={v}>{v}</option>}
       {versions.map(ver=><option key={ver} value={ver}>{ver}</option>)}
-    </select>
-  </div>);}
+    </select></div>);}
+
+/* ============ DevSel - 개발담당 (AOS/iOS/서버 그룹핑, 단일선택) ============ */
 function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
-  // 팀별 그룹핑
-  const groups: Record<string,any[]> = {};
-  devs.forEach(d => {
-    const dept = d.department || '기타';
-    if (!groups[dept]) groups[dept] = [];
-    groups[dept].push(d);
-  });
-  const order = ['개발팀','AIAE','운영','서버(백앤드)','서버(시스템)','중계','기획팀','데이터/광고','재무'];
-  const sorted = order.filter(k => groups[k]).concat(Object.keys(groups).filter(k => !order.includes(k)));
+  const groups:{label:string;items:any[]}[] = [
+    {label:'AOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='AOS')},
+    {label:'iOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='iOS')},
+    {label:'서버', items:devs.filter(d=>d.department.startsWith('서버'))},
+  ].filter(g=>g.items.length>0);
   return(
     <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
       <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
         <option value="">미배정</option>
-        {sorted.map(dept=>(
-          <optgroup key={dept} label={`── ${dept} ──`}>
-            {groups[dept].map((d:any)=><option key={d.id} value={d.id}>{d.name} ({d.role})</option>)}
+        {groups.map(g=>(
+          <optgroup key={g.label} label={`── ${g.label} ──`}>
+            {g.items.map(d=><option key={d.id} value={d.id}>{d.name} ({d.role})</option>)}
           </optgroup>
         ))}
       </select>

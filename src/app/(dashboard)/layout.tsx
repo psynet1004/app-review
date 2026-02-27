@@ -12,6 +12,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [aosVersion, setAosVersion] = useState('');
   const [iosVersion, setIosVersion] = useState('');
   const [userName, setUserName] = useState('');
+  const [userDept, setUserDept] = useState('');
 
   const loadVersions = useCallback(async () => {
     const { data } = await supabase.from('app_versions').select('*').order('created_at', { ascending: false });
@@ -25,9 +26,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     loadVersions();
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       const u = data.user;
-      if (u) setUserName(u.user_metadata?.full_name || u.email || '');
+      if (u) {
+        const name = u.user_metadata?.full_name || u.email || '';
+        setUserName(name);
+        // developers 테이블에서 이메일로 부서 조회
+        const email = u.email?.toLowerCase();
+        if (email) {
+          const { data: dev } = await supabase.from('developers').select('department').eq('email', email).single();
+          if (dev) setUserDept(dev.department);
+        }
+      }
     });
   }, [loadVersions]);
 
@@ -36,7 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       aosVersion, iosVersion, setAosVersion, setIosVersion,
       aosVersions: versions.filter(v => v.platform === 'AOS'),
       iosVersions: versions.filter(v => v.platform === 'iOS'),
-      refreshVersions: loadVersions, userName,
+      refreshVersions: loadVersions, userName, userDept,
     }}>
       <div className="flex h-screen bg-gray-50">
         <Sidebar />
