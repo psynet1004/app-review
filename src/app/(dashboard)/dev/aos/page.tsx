@@ -3,11 +3,13 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
-import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useVersion } from '@/components/layout/Header';
 import type { DevStatus, FixStatus, Priority, ReviewStatus } from '@/lib/types/database';
 
 const PLATFORM = 'AOS';
+const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
+const EXCLUDED_DEPTS = ['서버(시스템)','재무','데이터/광고','AIAE','운영'];
 
 export default function AosPage() {
   const supabase = createClient();
@@ -36,8 +38,11 @@ export default function AosPage() {
 
   useEffect(()=>{loadData();},[loadData]);
 
+  // 개발담당: 개발팀(팀원/팀장) + 서버(백앤드)(팀원/팀장)만
   const devTeam = useMemo(()=>developers.filter(d=>
-    ['개발팀','서버(백앤드)','서버(시스템)'].includes(d.department)
+    ['개발팀','서버(백앤드)'].includes(d.department) &&
+    !EXCLUDED_ROLES.includes(d.role) &&
+    !EXCLUDED_DEPTS.includes(d.department)
   ),[developers]);
 
   const filterVer = useCallback((items: any[], statusField: string) => {
@@ -90,20 +95,17 @@ export default function AosPage() {
     loadData();
   };
 
-  const ReviewSel = ({item,table}:{item:any;table:string}) => {
-    
-    return(
-      <select value={item.review_status||'검수전'} onChange={e=>handleReviewChange(table,item.id,e.target.value as ReviewStatus)}
-        className="text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-400"
-        onClick={e=>e.stopPropagation()}>
-        <option value="검수전">검수전</option>
-        <option value="검수중">검수중</option>
-        <option value="검수완료">검수완료</option>
-      </select>
-    );
-  };
+  const ReviewSel = ({item,table}:{item:any;table:string}) => (
+    <select value={item.review_status||'검수전'} onChange={e=>handleReviewChange(table,item.id,e.target.value as ReviewStatus)}
+      className="text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-400"
+      onClick={e=>e.stopPropagation()}>
+      <option value="검수전">검수전</option>
+      <option value="검수중">검수중</option>
+      <option value="검수완료">검수완료</option>
+    </select>
+  );
 
-  // 취소선 적용 여부
+  // 검수완료 시 취소선
   const isReviewed = (item:any) => item.fix_status==='수정완료' && item.review_status==='검수완료';
 
   const devCols = [
@@ -222,7 +224,7 @@ export default function AosPage() {
 function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
   const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_id:'',dev_status:'대기' as DevStatus,note:''});
   const [saving,ss]=useState(false);
-  useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));};},[userName,userDept,editId]);
+  useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_id:data.developer_id||'',dev_status:data.dev_status||'대기',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.menu_item.trim()){alert('항목명 필수');return;}ss(true);const p={...f,platform,developer_id:f.developer_id||null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else await supabase.from('dev_items').insert(p);ss(false);onSaved();};
   return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
@@ -231,7 +233,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
       <Inp l="항목명 *" v={f.menu_item} c={v=>sf(p=>({...p,menu_item:v}))}/>
     </div>
     <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
-    <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={v=>sf(p=>({...p,department:v}))} disabled/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
+    <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={()=>{}} disabled/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
     <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devTeam}/>
     <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="rounded"/>필수 항목</label>
@@ -243,12 +245,20 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
 function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
   const [f,sf]=useState({platform:hasPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_id:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
   const [saving,ss]=useState(false);
-  useEffect(()=>{if(!editId){sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));};},[userName,userDept,editId]);
+  useEffect(()=>{if(!editId){sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||hasPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',note:data.note||''});});},[editId]);
-  const save=async()=>{if(!f.location.trim()){alert('위치 필수');return;}ss(true);const p:any={...f,developer_id:f.developer_id||null};
+  const save=async()=>{
+    if(!f.location.trim()){alert('위치 필수');return;}
+    ss(true);
+    const p:any={...f,developer_id:f.developer_id||null};
     if(table!=='bug_items')delete p.platform;
     if(table==='bug_items'&&hasPlatform)p.platform=hasPlatform;
-    if(editId)await supabase.from(table).update(p).eq('id',editId);else await supabase.from(table).insert(p);ss(false);onSaved();};
+    // 새 등록 시 review_status 제외 (DB default 사용)
+    if(!editId) delete p.review_status;
+    if(editId)await supabase.from(table).update(p).eq('id',editId);
+    else await supabase.from(table).insert(p);
+    ss(false);onSaved();
+  };
   return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       {hasPlatform?<Inp l="플랫폼" v={hasPlatform} c={()=>{}} disabled/>:
@@ -260,15 +270,14 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
     <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
     <div className="grid grid-cols-2 gap-4">
       <Sel l="우선순위" v={f.priority} c={v=>sf(p=>({...p,priority:v as Priority}))} opts={['긴급','높음','보통','낮음'].map(s=>({v:s,l:s}))}/>
-      <Inp l="보고자" v={f.reporter} c={v=>sf(p=>({...p,reporter:v}))}/>
+      <Inp l="보고자" v={f.reporter} c={()=>{}} disabled/>
     </div>
     <div className="grid grid-cols-2 gap-4">
+      <Inp l="부서" v={f.department} c={()=>{}} disabled/>
       <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devTeam}/>
-      <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
     </div>
-    
-      <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>
-
+    <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
+    {editId && <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>}
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
@@ -286,9 +295,7 @@ function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?
 function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(
   <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
 
-/* ============ VerSel - 버전 선택 (현재 버전 우선 + 더보기) ============ */
 function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>void;versions:string[];defaultVer?:string}){
-  const [showAll,setShowAll]=useState(false);
   const mainVer = defaultVer || versions[0] || '';
   const otherVers = versions.filter(ver=>ver!==mainVer);
   return(
@@ -301,12 +308,12 @@ function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>voi
       </select>
     </div>);}
 
-/* ============ DevSel - 개발담당 (AOS/iOS/서버 그룹 + 그룹선택) ============ */
+/* ============ DevSel - 개발담당 (AOS/iOS/서버 그룹핑) ============ */
 function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
-  const groups:{label:string;key:string;items:any[]}[] = [
-    {label:'AOS', key:'AOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='AOS'&&d.name!=='구광완')},
-    {label:'iOS', key:'iOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='iOS')},
-    {label:'서버', key:'서버', items:devs.filter(d=>d.department.startsWith('서버')&&d.name!=='김주성')},
+  const groups:{label:string;items:any[]}[] = [
+    {label:'AOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='AOS')},
+    {label:'iOS', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='iOS')},
+    {label:'서버', items:devs.filter(d=>d.department==='서버(백앤드)')},
   ].filter(g=>g.items.length>0);
   return(
     <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
