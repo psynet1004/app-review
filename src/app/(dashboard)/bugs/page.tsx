@@ -148,7 +148,6 @@ function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
     <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
       <option value="">미배정</option>
       {groups.map(g=>(<optgroup key={g.label} label={`── ${g.label} ──`}>
-        <option value={`__GROUP__${g.key}`}>⚡ {g.label} 전체</option>
         {g.items.map(d=><option key={d.id} value={d.id}>{d.name} ({d.role})</option>)}
       </optgroup>))}
     </select></div>);}

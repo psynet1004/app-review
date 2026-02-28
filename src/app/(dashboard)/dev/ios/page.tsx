@@ -314,7 +314,6 @@ function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
         <option value="">미배정</option>
         {groups.map(g=>(
           <optgroup key={g.label} label={`── ${g.label} ──`}>
-            <option value={`__GROUP__${g.key}`}>⚡ {g.label} 전체</option>
             {g.items.map(d=><option key={d.id} value={d.id}>{d.name} ({d.role})</option>)}
           </optgroup>
         ))}
