@@ -35,14 +35,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
   useEffect(() => {
     loadVersions();
-    supabase.auth.getUser().then(async ({ data }) => {
+    supabase.auth.getUser().then(async ({ data }: { data: any }) => {
       const u = data.user;
       if (u) {
         const name = u.user_metadata?.full_name || u.email || '';
         setUserName(name);
         const email = u.email?.toLowerCase();
         if (email) {
-          const { data: dev } = await supabase
+          const { data: dev }: { data: any } = await supabase
             .from('developers')
             .select('department')
             .eq('email', email)
