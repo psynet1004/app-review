@@ -23,11 +23,13 @@ interface DataTableProps<T> {
   searchKeys?: string[];
   toolbar?: React.ReactNode;
   emptyMessage?: string;
+  noBorder?: boolean;
 }
 
 export default function DataTable<T extends Record<string, any>>({
   data, columns, selectable = false, selectedIds, onSelectionChange,
-  idKey = 'id', searchPlaceholder = '검색...', searchKeys = [], toolbar, emptyMessage = '데이터가 없습니다'
+  idKey = 'id', searchPlaceholder = '검색...', searchKeys = [], toolbar,
+  emptyMessage = '데이터가 없습니다', noBorder = false,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -80,7 +82,10 @@ export default function DataTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className={cn(
+      'bg-white overflow-hidden',
+      !noBorder && 'rounded-xl border border-gray-200'
+    )}>
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
