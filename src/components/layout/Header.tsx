@@ -39,7 +39,7 @@ export default function Header() {
   const ctx = useVersion();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    supabase.auth.getUser().then(({ data }: { data: any }) => setUser(data.user));
   }, [supabase]);
 
   const handleLogout = async () => {
