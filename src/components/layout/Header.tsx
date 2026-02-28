@@ -2,9 +2,10 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, createContext, useContext, useRef } from 'react';
-import { LogOut, User, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { LogOut, User, ChevronDown, Plus, Trash2, Moon, Sun } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { AppVersion } from '@/lib/types/database';
+import { useDark } from '@/components/layout/DashboardShell';
 
 export const VersionContext = createContext<{
   aosVersion: string;
@@ -37,6 +38,7 @@ export default function Header() {
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
   const ctx = useVersion();
+  const { dark, toggle } = useDark();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }: { data: any }) => setUser(data.user));
@@ -48,7 +50,7 @@ export default function Header() {
   };
 
   return (
-    <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 z-10">
+    <header className="h-14 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-6 flex-shrink-0 z-10">
       <div className="flex items-center gap-3">
         <VersionDropdown
           label="AOS"
@@ -67,10 +69,15 @@ export default function Header() {
           refresh={ctx.refreshVersions}
         />
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <button onClick={toggle}
+          className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+          title={dark ? '라이트 모드' : '다크 모드'}>
+          {dark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
         {user && (
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <div className="w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-300">
+            <div className="w-7 h-7 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center overflow-hidden">
               {user.user_metadata?.avatar_url ? (
                 <img
                   src={user.user_metadata.avatar_url}
@@ -88,7 +95,7 @@ export default function Header() {
         )}
         <button
           onClick={handleLogout}
-          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+          className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
           title="로그아웃"
         >
           <LogOut size={16} />
@@ -176,8 +183,8 @@ function VersionDropdown({
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 min-w-[240px] py-1 overflow-hidden">
-            <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+          <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-xl z-30 min-w-[240px] py-1 overflow-hidden">
+            <div className="px-4 py-2 text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700">
               {label} 버전
             </div>
             <div className="max-h-60 overflow-y-auto">

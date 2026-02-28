@@ -47,12 +47,12 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-gray-900 mb-6">대시보드</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-6">대시보드</h1>
 
       {!stats ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-4 animate-pulse">
               <div className="h-4 bg-gray-200 rounded w-20 mb-3" />
               <div className="h-8 bg-gray-200 rounded w-12" />
             </div>
@@ -63,14 +63,14 @@ export default function DashboardPage() {
           {cards.map(card => {
             const Icon = card.icon;
             return (
-              <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
+              <div key={card.label} className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`w-7 h-7 ${card.color} rounded-lg flex items-center justify-center`}>
                     <Icon size={14} className="text-white" />
                   </div>
-                  <span className="text-xs text-gray-500 font-medium">{card.label}</span>
+                  <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">{card.label}</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{card.value}</p>
               </div>
             );
           })}

@@ -97,7 +97,7 @@ export default function IosPage() {
 
   const ReviewSel = ({item,table}:{item:any;table:string}) => (
     <select value={item.review_status||'검수전'} onChange={e=>handleReviewChange(table,item.id,e.target.value as ReviewStatus)}
-      className="text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-400"
+      className="text-xs border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-400"
       onClick={e=>e.stopPropagation()}>
       <option value="검수전">검수전</option>
       <option value="검수중">검수중</option>
@@ -112,22 +112,22 @@ export default function IosPage() {
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
     {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'dev',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.menu_item}</button>},
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-1">{i.description||'-'}</span>},
-    {key:'is_required',label:'필수',width:'w-12',render:(i:any)=>i.is_required?<span className="text-xs font-bold text-blue-600">Y</span>:<span className="text-gray-300">-</span>},
-    {key:'department',label:'부서',width:'w-16',render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-24',render:(i:any)=>getDevNames(i)},
-    {key:'dev_status',label:'상태',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
-    {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
+    {key:'is_required',label:'필수',width:'w-12',align:'center' as const,render:(i:any)=>i.is_required?<span className="text-xs font-bold text-blue-600">Y</span>:<span className="text-gray-300">-</span>},
+    {key:'department',label:'부서',width:'w-16',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
+    {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
+    {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
+    {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
 
   const bugCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
-    {key:'priority',label:'우선순위',width:'w-20',sortable:true,render:(i:any)=><PriorityTag priority={i.priority}/>},
+    {key:'priority',label:'우선순위',width:'w-20',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>},
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-gray-500 text-xs line-clamp-1 ${isReviewed(i)?'line-through':''}`}>{i.description||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-24',render:(i:any)=>getDevNames(i)},
-    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
-    {key:'review_status',label:'검수',width:'w-24',render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
-    {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
+    {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
+    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
+    {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
+    {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
 
   const commonCols = bugCols.map(c=>{
@@ -181,33 +181,33 @@ export default function IosPage() {
 
   return (<div className="space-y-6">
     <div>
-      <h1 className="text-xl font-bold text-gray-900">iOS</h1>
-      {selectedVer && <p className="text-xs text-gray-500 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white">iOS</h1>
+      {selectedVer && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
     </div>
 
     <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <SectionHeader title="📋 개발항목" count={devItems.length} color="bg-blue-600" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
+      <SectionHeader title="📋 개발항목" count={devItems.length} color="bg-slate-600" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
       {!collapsed.dev && <DataTable data={devItems} columns={devCols} selectable selectedIds={selDev} onSelectionChange={setSelDev}
         searchKeys={['menu_item','description','department']} searchPlaceholder="개발항목 검색..." emptyMessage={loading?'로딩 중...':'등록된 항목 없음'}
         toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)}/>}/>}
     </div>
 
     <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="bg-red-500" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
+      <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="bg-slate-500" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
       {!collapsed.bug && <DataTable data={bugItems} columns={bugCols} selectable selectedIds={selBug} onSelectionChange={setSelBug}
         searchKeys={['location','description','reporter']} searchPlaceholder="앱 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)}/>}/>}
     </div>
 
     <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="bg-orange-500" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
+      <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="bg-stone-500" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
       {!collapsed.common && <DataTable data={commonItems} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
         searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)}/>}/>}
     </div>
 
     <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="bg-purple-500" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
+      <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="bg-zinc-500" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
       {!collapsed.server && <DataTable data={serverItems} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
         searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)}/>}/>}

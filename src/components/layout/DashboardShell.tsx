@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header, { VersionContext } from '@/components/layout/Header';
 import { createClient } from '@/lib/supabase/client';
 import type { AppVersion } from '@/lib/types/database';
+
+export const DarkContext = createContext<{ dark: boolean; toggle: () => void }>({ dark: false, toggle: () => {} });
+export function useDark() { return useContext(DarkContext); }
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const supabaseRef = useRef(createClient());
@@ -15,6 +18,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [iosVersion, setIosVersion] = useState('');
   const [userName, setUserName] = useState('');
   const [userDept, setUserDept] = useState('');
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') { setDark(true); document.documentElement.classList.add('dark'); }
+  }, []);
+
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('theme', next ? 'dark' : 'light');
+  };
 
   const loadVersions = useCallback(async () => {
     const { data } = await supabase
@@ -54,28 +70,30 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, [loadVersions, supabase]);
 
   return (
-    <VersionContext.Provider
-      value={{
-        aosVersion,
-        iosVersion,
-        setAosVersion,
-        setIosVersion,
-        aosVersions: versions.filter(v => v.platform === 'AOS'),
-        iosVersions: versions.filter(v => v.platform === 'iOS'),
-        refreshVersions: loadVersions,
-        userName,
-        userDept,
-      }}
-    >
-      <div id="dashboard-shell" className="bg-gray-50">
-        <Sidebar />
-        <div id="dashboard-content">
-          <Header />
-          <main id="dashboard-main" className="p-6">
-            {children}
-          </main>
+    <DarkContext.Provider value={{ dark, toggle: toggleDark }}>
+      <VersionContext.Provider
+        value={{
+          aosVersion,
+          iosVersion,
+          setAosVersion,
+          setIosVersion,
+          aosVersions: versions.filter(v => v.platform === 'AOS'),
+          iosVersions: versions.filter(v => v.platform === 'iOS'),
+          refreshVersions: loadVersions,
+          userName,
+          userDept,
+        }}
+      >
+        <div id="dashboard-shell" className="bg-gray-50 dark:bg-slate-950">
+          <Sidebar />
+          <div id="dashboard-content">
+            <Header />
+            <main id="dashboard-main" className="p-6">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
-    </VersionContext.Provider>
+      </VersionContext.Provider>
+    </DarkContext.Provider>
   );
 }
