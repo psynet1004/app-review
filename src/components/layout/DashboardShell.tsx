@@ -21,7 +21,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       .from('app_versions')
       .select('*')
       .order('created_at', { ascending: false });
-    const vs = data || [];
+    const vs: AppVersion[] = (data as AppVersion[]) || [];
     setVersions(vs);
     const aosVs = vs.filter(v => v.platform === 'AOS');
     const iosVs = vs.filter(v => v.platform === 'iOS');
