@@ -11,7 +11,7 @@ export default function LogsPage() {
 
   useEffect(() => {
     supabase.from('send_logs').select('*').order('sent_at', { ascending: false }).limit(100)
-      .then(({ data }) => { setLogs(data || []); setLoading(false); });
+      .then(({ data }: { data: any }) => { setLogs(data || []); setLoading(false); });
   }, []);
 
   return (
