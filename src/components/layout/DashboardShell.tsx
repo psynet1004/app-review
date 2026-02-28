@@ -84,7 +84,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           userDept,
         }}
       >
-        <div id="dashboard-shell" className="bg-gray-50 dark:bg-slate-950">
+        <div id="dashboard-shell" className="bg-neutral-50 dark:bg-neutral-950">
           <Sidebar />
           <div id="dashboard-content">
             <Header />

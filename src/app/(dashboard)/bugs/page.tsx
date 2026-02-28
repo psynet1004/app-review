@@ -62,7 +62,7 @@ export default function AppBugsPage() {
   };
   const ReviewSel = ({item}:{item:any}) => (
     <select value={item.review_status||'검수전'} onChange={e=>handleReviewChange(item.id,e.target.value as ReviewStatus)}
-      className="text-xs border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-400" onClick={e=>e.stopPropagation()}>
+      className="text-xs border border-neutral-200 dark:border-neutral-800 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400" onClick={e=>e.stopPropagation()}>
       <option value="검수전">검수전</option><option value="검수중">검수중</option><option value="검수완료">검수완료</option>
     </select>
   );
@@ -71,9 +71,9 @@ export default function AppBugsPage() {
   const makeCols=(platform:'AOS'|'iOS')=>[
     {key:'version',label:'버전',width:'w-28',sortable:true,render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
-    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({platform,id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>},
-    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-gray-500 text-xs line-clamp-1 ${isReviewed(i)?'line-through':''}`}>{i.description||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-20',align:'center' as const,render:(i:any)=>i.developers?.name||<span className="text-gray-300">-</span>},
+    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({platform,id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
+    {key:'developer',label:'개발담당',width:'w-20',align:'center' as const,render:(i:any)=>i.developers?.name||<span className="text-neutral-300 dark:text-neutral-600">-</span>},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
@@ -102,8 +102,8 @@ export default function AppBugsPage() {
       </div>
 
       {/* AOS Section */}
-      <div className="rounded-xl border border-gray-200 bg-white dark:bg-slate-900 overflow-hidden">
-        <SectionHeader title="📱 AOS 앱 오류" count={aosBugs.length} color="bg-slate-600" sectionKey="aos" onAdd={()=>setShowForm({platform:'AOS'})}/>
+      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden">
+        <SectionHeader title="📱 AOS 앱 오류" count={aosBugs.length} color="bg-neutral-900 dark:bg-neutral-800" sectionKey="aos" onAdd={()=>setShowForm({platform:'AOS'})}/>
         {!collapsed.aos && (
           <DataTable
             data={aosBugs}
@@ -120,8 +120,8 @@ export default function AppBugsPage() {
       </div>
 
       {/* iOS Section */}
-      <div className="rounded-xl border border-gray-200 bg-white dark:bg-slate-900 overflow-hidden">
-        <SectionHeader title="🍎 iOS 앱 오류" count={iosBugs.length} color="bg-slate-500" sectionKey="ios" onAdd={()=>setShowForm({platform:'iOS'})}/>
+      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden">
+        <SectionHeader title="🍎 iOS 앱 오류" count={iosBugs.length} color="bg-neutral-800 dark:bg-neutral-800" sectionKey="ios" onAdd={()=>setShowForm({platform:'iOS'})}/>
         {!collapsed.ios && (
           <DataTable
             data={iosBugs}
@@ -203,7 +203,7 @@ function BugModal({supabase,devTeam,editId,platform,defaultVersion,versionList,u
 }
 
 function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean;disabled?:boolean}){
-  const cls="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500";
+  const cls="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500";
   return(
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
@@ -219,7 +219,7 @@ function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l
   return(
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm">
         {opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
       </select>
     </div>
@@ -232,7 +232,7 @@ function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>voi
   return(
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
         {mainVer && <option value={mainVer}>{mainVer} (현재)</option>}
         {v && v!==mainVer && !versions.includes(v) && <option value={v}>{v}</option>}
         {otherVers.length>0 && <option disabled>── 다른 버전 ──</option>}
@@ -251,7 +251,7 @@ function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
   return(
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
         <option value="">미배정</option>
         {groups.map(g=>(
           <optgroup key={g.label} label={`── ${g.label} ──`}>

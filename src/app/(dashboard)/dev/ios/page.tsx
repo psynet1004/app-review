@@ -70,7 +70,7 @@ export default function IosPage() {
   const afterSave=()=>{closeForm();loadData();};
 
   const CarriedBadge = ({item}:{item:any}) => item._carried ? (
-    <span className="inline-flex items-center gap-0.5 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium ml-1">
+    <span className="inline-flex items-center gap-0.5 text-[10px] bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 px-1.5 py-0.5 rounded-full font-medium ml-1">
       <ArrowRightLeft size={9}/>{item._origVer}
     </span>
   ) : null;
@@ -81,12 +81,12 @@ export default function IosPage() {
   const [selServer, setSelServer] = useState<Set<string>>(new Set());
 
   const getDevNames = (item:any) => {
-    if (!item.developer_id) return <span className="text-gray-300">-</span>;
+    if (!item.developer_id) return <span className="text-neutral-300 dark:text-neutral-600">-</span>;
     if (typeof item.developer_id === 'string') {
       const dev = developers.find(d=>d.id===item.developer_id);
-      return dev ? dev.name : <span className="text-gray-300">-</span>;
+      return dev ? dev.name : <span className="text-neutral-300 dark:text-neutral-600">-</span>;
     }
-    return item.developers?.name || <span className="text-gray-300">-</span>;
+    return item.developers?.name || <span className="text-neutral-300 dark:text-neutral-600">-</span>;
   };
 
   // 검수상태 인라인 변경
@@ -97,7 +97,7 @@ export default function IosPage() {
 
   const ReviewSel = ({item,table}:{item:any;table:string}) => (
     <select value={item.review_status||'검수전'} onChange={e=>handleReviewChange(table,item.id,e.target.value as ReviewStatus)}
-      className="text-xs border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-400"
+      className="text-xs border border-neutral-200 dark:border-neutral-800 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400"
       onClick={e=>e.stopPropagation()}>
       <option value="검수전">검수전</option>
       <option value="검수중">검수중</option>
@@ -110,9 +110,9 @@ export default function IosPage() {
 
   const devCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
-    {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'dev',id:i.id})} className="text-blue-600 hover:underline font-medium text-left">{i.menu_item}</button>},
-    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-gray-500 text-xs line-clamp-1">{i.description||'-'}</span>},
-    {key:'is_required',label:'필수',width:'w-12',align:'center' as const,render:(i:any)=>i.is_required?<span className="text-xs font-bold text-blue-600">Y</span>:<span className="text-gray-300">-</span>},
+    {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'dev',id:i.id})} className="text-neutral-900 dark:text-white hover:underline font-medium text-left">{i.menu_item}</button>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1">{i.description||'-'}</span>},
+    {key:'is_required',label:'필수',width:'w-12',align:'center' as const,render:(i:any)=>i.is_required?<span className="text-xs font-bold text-red-600 dark:text-red-400">Y</span>:<span className="text-neutral-300 dark:text-neutral-600">-</span>},
     {key:'department',label:'부서',width:'w-16',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
@@ -122,8 +122,8 @@ export default function IosPage() {
   const bugCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
-    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>},
-    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-gray-500 text-xs line-clamp-1 ${isReviewed(i)?'line-through':''}`}>{i.description||'-'}</span>},
+    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
@@ -131,12 +131,12 @@ export default function IosPage() {
   ];
 
   const commonCols = bugCols.map(c=>{
-    if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'common',id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>};
+    if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'common',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>};
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="common_bugs"/>};
     return c;
   });
   const serverCols = bugCols.map(c=>{
-    if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'server',id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>};
+    if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'server',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>};
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="server_bugs"/>};
     return c;
   });
@@ -170,8 +170,8 @@ export default function IosPage() {
   );
 
   const SendBar = ({ids,onSend}:{ids:Set<string>;onSend:()=>void}) => ids.size > 0 ? (
-    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100">
-      <button onClick={onSend} className="flex items-center gap-1 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-emerald-700">
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-neutral-100 dark:border-neutral-800">
+      <button onClick={onSend} className="flex items-center gap-1 bg-neutral-900 dark:bg-white dark:text-black text-white text-xs px-3 py-1.5 rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-200">
         <Send size={12}/>선택 전송 ({ids.size})
       </button>
     </div>
@@ -185,29 +185,29 @@ export default function IosPage() {
       {selectedVer && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
     </div>
 
-    <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <SectionHeader title="📋 개발항목" count={devItems.length} color="bg-slate-600" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
+    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+      <SectionHeader title="📋 개발항목" count={devItems.length} color="bg-neutral-900 dark:bg-neutral-800" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
       {!collapsed.dev && <DataTable data={devItems} columns={devCols} selectable selectedIds={selDev} onSelectionChange={setSelDev}
         searchKeys={['menu_item','description','department']} searchPlaceholder="개발항목 검색..." emptyMessage={loading?'로딩 중...':'등록된 항목 없음'}
         toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)}/>}/>}
     </div>
 
-    <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="bg-slate-500" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
+    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+      <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="bg-neutral-800 dark:bg-neutral-800" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
       {!collapsed.bug && <DataTable data={bugItems} columns={bugCols} selectable selectedIds={selBug} onSelectionChange={setSelBug}
         searchKeys={['location','description','reporter']} searchPlaceholder="앱 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)}/>}/>}
     </div>
 
-    <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="bg-stone-500" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
+    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+      <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="bg-neutral-700 dark:bg-neutral-800" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
       {!collapsed.common && <DataTable data={commonItems} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
         searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)}/>}/>}
     </div>
 
-    <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="bg-zinc-500" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
+    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+      <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="bg-neutral-600 dark:bg-neutral-800" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
       {!collapsed.server && <DataTable data={serverItems} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
         searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)}/>}/>}
@@ -290,17 +290,17 @@ function Foot({editId,onDel,onClose,onSave,saving}:any){return(
   <div className="flex justify-between px-6 py-4 border-t bg-gray-50">{editId?<button onClick={onDel} className="text-red-500 hover:text-red-700 text-sm font-medium">삭제</button>:<div/>}
     <div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button><button onClick={onSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>);}
 function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean;disabled?:boolean}){
-  const cls="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500";
+  const cls="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500";
   return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls} disabled={disabled}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls} disabled={disabled}/>}</div>);}
 function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(
-  <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
+  <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
 
 function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>void;versions:string[];defaultVer?:string}){
   const mainVer = defaultVer || versions[0] || '';
   const otherVers = versions.filter(ver=>ver!==mainVer);
   return(
     <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
         {mainVer && <option value={mainVer}>{mainVer} (현재)</option>}
         {v && v!==mainVer && !versions.includes(v) && <option value={v}>{v}</option>}
         {otherVers.length>0 && <option disabled>── 다른 버전 ──</option>}
@@ -317,7 +317,7 @@ function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
   ].filter(g=>g.items.length>0);
   return(
     <div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
         <option value="">미배정</option>
         {groups.map(g=>(
           <optgroup key={g.label} label={`── ${g.label} ──`}>

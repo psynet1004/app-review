@@ -25,7 +25,6 @@ const navItems = [
 
 function isActive(href: string, pathname: string): boolean {
   if (href === '/') return pathname === '/';
-  // /bugs 는 정확 매치만, /bugs/common, /bugs/server는 별도
   if (href === '/bugs') return pathname === '/bugs';
   return pathname.startsWith(href);
 }
@@ -38,24 +37,23 @@ export default function Sidebar() {
     <aside
       id="dashboard-sidebar"
       className={cn(
-        'bg-slate-900 text-white flex flex-col transition-[width] duration-200',
+        'bg-neutral-950 text-white flex flex-col transition-[width] duration-200',
         collapsed ? 'w-16' : 'w-56'
       )}
     >
-      {/* Logo */}
-      <div className="h-14 flex items-center px-4 border-b border-slate-700 flex-shrink-0">
+      <div className="h-14 flex items-center px-4 border-b border-neutral-800 flex-shrink-0">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center text-xs font-bold">
+            <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center text-xs font-black">
               QA
             </div>
-            <span className="font-semibold text-sm whitespace-nowrap">앱 검수 관리</span>
+            <span className="font-semibold text-sm whitespace-nowrap tracking-tight">검수 관리</span>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            'p-1 rounded hover:bg-slate-700 text-slate-400',
+            'p-1 rounded hover:bg-neutral-800 text-neutral-500',
             collapsed ? 'mx-auto' : 'ml-auto'
           )}
         >
@@ -63,18 +61,17 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-3 overflow-y-auto">
         {navItems.map((item, i) => {
           if ('type' in item && item.type === 'divider') {
             return !collapsed ? (
-              <div key={`div-${i}`} className="px-4 pt-4 pb-1">
-                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              <div key={`div-${i}`} className="px-4 pt-5 pb-1">
+                <span className="text-[10px] font-semibold text-neutral-600 uppercase tracking-widest">
                   {item.label}
                 </span>
               </div>
             ) : (
-              <div key={`div-${i}`} className="my-2 mx-3 border-t border-slate-700" />
+              <div key={`div-${i}`} className="my-2 mx-3 border-t border-neutral-800" />
             );
           }
 
@@ -90,8 +87,8 @@ export default function Sidebar() {
               className={cn(
                 'flex items-center gap-3 mx-2 px-3 py-2 rounded-lg text-sm transition-colors',
                 active
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white',
+                  ? 'bg-white text-black font-semibold'
+                  : 'text-neutral-400 hover:bg-neutral-900 hover:text-white',
                 collapsed && 'justify-center px-2'
               )}
               title={collapsed ? nav.label : undefined}

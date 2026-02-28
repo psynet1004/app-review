@@ -50,7 +50,7 @@ export default function Header() {
   };
 
   return (
-    <header className="h-14 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-6 flex-shrink-0 z-10">
+    <header className="h-14 bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-6 flex-shrink-0 z-10">
       <div className="flex items-center gap-3">
         <VersionDropdown
           label="AOS"
@@ -71,13 +71,13 @@ export default function Header() {
       </div>
       <div className="flex items-center gap-2">
         <button onClick={toggle}
-          className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+          className="p-2 rounded-lg text-neutral-400 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition"
           title={dark ? '라이트 모드' : '다크 모드'}>
           {dark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
         {user && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-300">
-            <div className="w-7 h-7 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center overflow-hidden">
+          <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+            <div className="w-7 h-7 bg-neutral-200 dark:bg-neutral-700 rounded-full flex items-center justify-center overflow-hidden">
               {user.user_metadata?.avatar_url ? (
                 <img
                   src={user.user_metadata.avatar_url}
@@ -95,7 +95,7 @@ export default function Header() {
         )}
         <button
           onClick={handleLogout}
-          className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
+          className="p-2 text-neutral-400 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-lg"
           title="로그아웃"
         >
           <LogOut size={16} />
@@ -128,15 +128,15 @@ function VersionDropdown({
   const cc =
     color === 'green'
       ? {
-          bg: 'bg-green-50 border-green-200',
+          bg: 'bg-neutral-100 border-neutral-300 dark:bg-neutral-800 dark:border-neutral-700',
           text: 'text-green-700',
-          dot: 'bg-green-500',
+          dot: 'bg-neutral-900 dark:bg-white',
           activeBg: 'bg-green-100',
         }
       : {
-          bg: 'bg-blue-50 border-blue-200',
+          bg: 'bg-neutral-100 border-neutral-300 dark:bg-neutral-800 dark:border-neutral-700',
           text: 'text-blue-700',
-          dot: 'bg-blue-500',
+          dot: 'bg-neutral-600 dark:bg-neutral-400',
           activeBg: 'bg-blue-100',
         };
 
@@ -183,8 +183,8 @@ function VersionDropdown({
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-xl z-30 min-w-[240px] py-1 overflow-hidden">
-            <div className="px-4 py-2 text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700">
+          <div className="absolute top-full left-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl z-30 min-w-[240px] py-1 overflow-hidden">
+            <div className="px-4 py-2 text-[10px] font-bold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider border-b border-neutral-100 dark:border-neutral-800">
               {label} 버전
             </div>
             <div className="max-h-60 overflow-y-auto">
@@ -250,12 +250,12 @@ function VersionDropdown({
                   onChange={e => setNewVer(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleAdd()}
                   placeholder="새 버전 (예: V52.0.0)"
-                  className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-neutral-400 focus:border-transparent"
                 />
                 <button
                   onClick={handleAdd}
                   disabled={!newVer.trim()}
-                  className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-30"
+                  className="p-1.5 bg-neutral-900 dark:bg-white dark:text-black text-white rounded-lg hover:bg-neutral-700 dark:hover:bg-neutral-200 disabled:opacity-30"
                 >
                   <Plus size={14} />
                 </button>
