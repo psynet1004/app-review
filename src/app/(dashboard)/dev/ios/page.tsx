@@ -70,7 +70,7 @@ export default function IosPage() {
   const afterSave=()=>{closeForm();loadData();};
 
   const CarriedBadge = ({item}:{item:any}) => item._carried ? (
-    <span className="inline-flex items-center gap-0.5 text-[10px] bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300 px-1.5 py-0.5 rounded-full font-medium ml-1">
+    <span className="inline-flex items-center gap-0.5 text-[10px] bg-white text-neutral-700 border-2 border-neutral-400 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-600 px-1.5 py-0.5 rounded-full font-medium ml-1">
       <ArrowRightLeft size={9}/>{item._origVer}
     </span>
   ) : null;
@@ -159,19 +159,19 @@ export default function IosPage() {
   };
 
   const SectionHeader = ({title,count,color,sectionKey,onAdd}:{title:string;count:number;color:string;sectionKey:string;onAdd:()=>void}) => (
-    <div className={`flex items-center justify-between py-3 px-4 ${color} rounded-t-xl cursor-pointer select-none`} onClick={()=>toggle(sectionKey)}>
+    <div className={`flex items-center justify-between py-3 px-4 bg-black dark:bg-neutral-800 rounded-t-md cursor-pointer select-none border-b-2 border-black dark:border-neutral-700`} onClick={()=>toggle(sectionKey)}>
       <div className="flex items-center gap-2">
         {collapsed[sectionKey]?<ChevronDown size={16} className="text-white/70"/>:<ChevronUp size={16} className="text-white/70"/>}
         <h2 className="text-sm font-bold text-white">{title}</h2>
         <span className="text-xs text-white/70 bg-white/20 px-2 py-0.5 rounded-full">{count}건</span>
       </div>
-      <button onClick={(e)=>{e.stopPropagation();onAdd();}} className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition">+ 추가</button>
+      <button onClick={(e)=>{e.stopPropagation();onAdd();}} className="text-xs bg-white text-black font-bold px-3 py-1 rounded-md border-2 border-white hover:shadow-[2px_2px_0_0_rgba(255,255,255,0.5)] transition-all">+ 추가</button>
     </div>
   );
 
   const SendBar = ({ids,onSend}:{ids:Set<string>;onSend:()=>void}) => ids.size > 0 ? (
     <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-neutral-100 dark:border-neutral-800">
-      <button onClick={onSend} className="flex items-center gap-1 bg-neutral-900 dark:bg-white dark:text-black text-white text-xs px-3 py-1.5 rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-200">
+      <button onClick={onSend} className="flex items-center gap-1 bg-black text-white text-xs px-3 py-1.5 rounded-md border-2 border-black font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] dark:bg-white dark:text-black dark:border-white">
         <Send size={12}/>선택 전송 ({ids.size})
       </button>
     </div>
@@ -185,29 +185,29 @@ export default function IosPage() {
       {selectedVer && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
     </div>
 
-    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-      <SectionHeader title="📋 개발항목" count={devItems.length} color="bg-neutral-900 dark:bg-neutral-800" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
+    <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
+      <SectionHeader title="📋 개발항목" count={devItems.length} color="cel-dev" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
       {!collapsed.dev && <DataTable data={devItems} columns={devCols} selectable selectedIds={selDev} onSelectionChange={setSelDev}
         searchKeys={['menu_item','description','department']} searchPlaceholder="개발항목 검색..." emptyMessage={loading?'로딩 중...':'등록된 항목 없음'}
         toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)}/>}/>}
     </div>
 
-    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-      <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="bg-neutral-800 dark:bg-neutral-800" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
+    <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
+      <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="cel-bug" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
       {!collapsed.bug && <DataTable data={bugItems} columns={bugCols} selectable selectedIds={selBug} onSelectionChange={setSelBug}
         searchKeys={['location','description','reporter']} searchPlaceholder="앱 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)}/>}/>}
     </div>
 
-    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-      <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="bg-neutral-700 dark:bg-neutral-800" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
+    <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
+      <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="cel-common" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
       {!collapsed.common && <DataTable data={commonItems} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
         searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)}/>}/>}
     </div>
 
-    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-      <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="bg-neutral-600 dark:bg-neutral-800" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
+    <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
+      <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="cel-server" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
       {!collapsed.server && <DataTable data={serverItems} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
         searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)}/>}/>}
@@ -284,7 +284,7 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
 
 /* ============ Shared UI ============ */
 function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return(
-  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
     <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold text-lg">{title}</h2><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>{children}</div></div>);}
 function Foot({editId,onDel,onClose,onSave,saving}:any){return(
   <div className="flex justify-between px-6 py-4 border-t bg-gray-50">{editId?<button onClick={onDel} className="text-red-500 hover:text-red-700 text-sm font-medium">삭제</button>:<div/>}

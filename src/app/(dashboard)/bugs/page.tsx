@@ -81,7 +81,7 @@ export default function AppBugsPage() {
   const handleDel=async(id:string)=>{if(!confirm('삭제?'))return;await supabase.from('bug_items').delete().eq('id',id);afterSave();};
 
   const SectionHeader=({title,count,color,sectionKey,onAdd}:{title:string;count:number;color:string;sectionKey:string;onAdd:()=>void})=>(
-    <div className={`flex items-center justify-between py-3 px-4 ${color} rounded-t-xl cursor-pointer select-none`} onClick={()=>toggle(sectionKey)}>
+    <div className={`flex items-center justify-between py-3 px-4 bg-black dark:bg-neutral-800 rounded-t-md cursor-pointer select-none border-b-2 border-black dark:border-neutral-700`} onClick={()=>toggle(sectionKey)}>
       <div className="flex items-center gap-2">
         {collapsed[sectionKey]?<ChevronDown size={16} className="text-white/70"/>:<ChevronUp size={16} className="text-white/70"/>}
         <h2 className="text-sm font-bold text-white">{title}</h2>
@@ -102,8 +102,8 @@ export default function AppBugsPage() {
       </div>
 
       {/* AOS Section */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden">
-        <SectionHeader title="📱 AOS 앱 오류" count={aosBugs.length} color="bg-neutral-900 dark:bg-neutral-800" sectionKey="aos" onAdd={()=>setShowForm({platform:'AOS'})}/>
+      <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] bg-white dark:bg-neutral-950 overflow-hidden">
+        <SectionHeader title="📱 AOS 앱 오류" count={aosBugs.length} color="cel-aos" sectionKey="aos" onAdd={()=>setShowForm({platform:'AOS'})}/>
         {!collapsed.aos && (
           <DataTable
             data={aosBugs}
@@ -120,8 +120,8 @@ export default function AppBugsPage() {
       </div>
 
       {/* iOS Section */}
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden">
-        <SectionHeader title="🍎 iOS 앱 오류" count={iosBugs.length} color="bg-neutral-800 dark:bg-neutral-800" sectionKey="ios" onAdd={()=>setShowForm({platform:'iOS'})}/>
+      <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] bg-white dark:bg-neutral-950 overflow-hidden">
+        <SectionHeader title="🍎 iOS 앱 오류" count={iosBugs.length} color="cel-ios" sectionKey="ios" onAdd={()=>setShowForm({platform:'iOS'})}/>
         {!collapsed.ios && (
           <DataTable
             data={iosBugs}
@@ -168,8 +168,8 @@ function BugModal({supabase,devTeam,editId,platform,defaultVersion,versionList,u
     if(editId)await supabase.from('bug_items').update(p).eq('id',editId);else await supabase.from('bug_items').insert(p);ss(false);onSaved();
   };
   return(
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="font-bold text-lg">{editId?'앱 오류 수정':'앱 오류 추가'} ({platform})</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>

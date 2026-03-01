@@ -73,18 +73,13 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     <DarkContext.Provider value={{ dark, toggle: toggleDark }}>
       <VersionContext.Provider
         value={{
-          aosVersion,
-          iosVersion,
-          setAosVersion,
-          setIosVersion,
+          aosVersion, iosVersion, setAosVersion, setIosVersion,
           aosVersions: versions.filter(v => v.platform === 'AOS'),
           iosVersions: versions.filter(v => v.platform === 'iOS'),
-          refreshVersions: loadVersions,
-          userName,
-          userDept,
+          refreshVersions: loadVersions, userName, userDept,
         }}
       >
-        <div id="dashboard-shell" className="bg-neutral-50 dark:bg-neutral-950">
+        <div id="dashboard-shell" className="bg-stone-100 dark:bg-neutral-950">
           <Sidebar />
           <div id="dashboard-content">
             <Header />

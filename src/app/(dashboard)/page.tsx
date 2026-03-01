@@ -37,22 +37,22 @@ export default function DashboardPage() {
   }, []);
 
   const cards = stats ? [
-    { label: 'AOS 개발항목', value: stats.aosCount, icon: Smartphone, color: 'bg-neutral-900 dark:bg-white' },
-    { label: 'iOS 개발항목', value: stats.iosCount, icon: Apple, color: 'bg-neutral-800 dark:bg-neutral-200' },
-    { label: '앱 오류', value: stats.bugCount, icon: Bug, color: 'bg-red-600' },
-    { label: '공통 오류', value: stats.commonBugCount, icon: AlertTriangle, color: 'bg-neutral-600 dark:bg-neutral-400' },
-    { label: '서버 오류', value: stats.serverBugCount, icon: Server, color: 'bg-neutral-500 dark:bg-neutral-500' },
-    { label: '미전송 항목', value: stats.unsent, icon: Send, color: 'bg-neutral-400 dark:bg-neutral-600' },
+    { label: 'AOS 개발', value: stats.aosCount, icon: Smartphone, accent: false },
+    { label: 'iOS 개발', value: stats.iosCount, icon: Apple, accent: false },
+    { label: '앱 오류', value: stats.bugCount, icon: Bug, accent: true },
+    { label: '공통 오류', value: stats.commonBugCount, icon: AlertTriangle, accent: false },
+    { label: '서버 오류', value: stats.serverBugCount, icon: Server, accent: false },
+    { label: '미전송', value: stats.unsent, icon: Send, accent: stats.unsent > 0 },
   ] : [];
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-6">대시보드</h1>
+      <h1 className="text-xl font-black text-black dark:text-white mb-6 tracking-tight">대시보드</h1>
 
       {!stats ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-neutral-200 dark:border-neutral-800 dark:border-slate-700 p-4 animate-pulse">
+            <div key={i} className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-neutral-300 dark:border-neutral-700 p-4 animate-pulse">
               <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-20 mb-3" />
               <div className="h-8 bg-neutral-200 dark:bg-neutral-700 rounded w-12" />
             </div>
@@ -63,44 +63,43 @@ export default function DashboardPage() {
           {cards.map(card => {
             const Icon = card.icon;
             return (
-              <div key={card.label} className="bg-white dark:bg-slate-900 rounded-xl border border-neutral-200 dark:border-neutral-800 dark:border-slate-700 p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-7 h-7 ${card.color} rounded-lg flex items-center justify-center`}>
-                    <Icon size={14} className="text-white" />
+              <div key={card.label} className={`bg-white dark:bg-neutral-900 rounded-lg border-2 p-4 transition-all hover:-translate-y-0.5 ${card.accent ? 'border-red-500 shadow-[3px_3px_0_0_rgba(239,68,68,1)]' : 'border-black dark:border-neutral-600 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)]'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`w-8 h-8 rounded-md border-2 flex items-center justify-center ${card.accent ? 'bg-red-600 border-red-700' : 'bg-black dark:bg-white border-black dark:border-white'}`}>
+                    <Icon size={15} strokeWidth={2.5} className={card.accent ? 'text-white' : 'text-white dark:text-black'} />
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">{card.label}</span>
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-bold uppercase tracking-wide">{card.label}</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{card.value}</p>
+                <p className={`text-3xl font-black ${card.accent && card.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-black dark:text-white'}`}>{card.value}</p>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Recent Logs */}
       {stats?.recentLogs && stats.recentLogs.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">최근 전송 이력</h2>
-          <div className="bg-white rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+          <h2 className="text-sm font-black text-neutral-700 dark:text-neutral-300 mb-3 uppercase tracking-wide">최근 전송 이력</h2>
+          <div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">시각</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">유형</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">대상</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">항목수</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">결과</th>
+                <tr className="bg-neutral-100 dark:bg-neutral-800 border-b-2 border-black dark:border-neutral-700">
+                  <th className="px-4 py-2.5 text-left text-xs font-black text-neutral-600 dark:text-neutral-400 uppercase">시각</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-black text-neutral-600 dark:text-neutral-400 uppercase">유형</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-black text-neutral-600 dark:text-neutral-400 uppercase">대상</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-black text-neutral-600 dark:text-neutral-400 uppercase">항목수</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-black text-neutral-600 dark:text-neutral-400 uppercase">결과</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                 {stats.recentLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                    <td className="px-4 py-2 text-gray-600">{new Date(log.sent_at).toLocaleString('ko-KR')}</td>
-                    <td className="px-4 py-2">{log.send_type}</td>
-                    <td className="px-4 py-2">{log.target_space}</td>
-                    <td className="px-4 py-2">{log.item_count}건</td>
-                    <td className="px-4 py-2">
-                      <span className={`text-xs font-medium ${log.result === '성공' ? 'text-neutral-900 dark:text-white' : 'text-red-600'}`}>
+                  <tr key={log.id} className="hover:bg-stone-50 dark:hover:bg-neutral-800/50">
+                    <td className="px-4 py-2.5 text-neutral-600 dark:text-neutral-400 font-medium">{new Date(log.sent_at).toLocaleString('ko-KR')}</td>
+                    <td className="px-4 py-2.5 font-bold text-black dark:text-white">{log.send_type}</td>
+                    <td className="px-4 py-2.5 font-medium">{log.target_space}</td>
+                    <td className="px-4 py-2.5 font-bold">{log.item_count}건</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-xs font-black px-2 py-0.5 rounded border-2 ${log.result === '성공' ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white' : 'bg-red-50 text-red-600 border-red-500'}`}>
                         {log.result}
                       </span>
                     </td>

@@ -37,23 +37,23 @@ export default function Sidebar() {
     <aside
       id="dashboard-sidebar"
       className={cn(
-        'bg-neutral-950 text-white flex flex-col transition-[width] duration-200',
+        'bg-neutral-950 text-white flex flex-col transition-[width] duration-200 border-r-[3px] border-black',
         collapsed ? 'w-16' : 'w-56'
       )}
     >
-      <div className="h-14 flex items-center px-4 border-b border-neutral-800 flex-shrink-0">
+      <div className="h-14 flex items-center px-4 border-b-2 border-neutral-800 flex-shrink-0">
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center text-xs font-black">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-white text-black rounded-md border-2 border-black flex items-center justify-center text-xs font-black shadow-[2px_2px_0_0_rgba(255,255,255,0.2)]">
               QA
             </div>
-            <span className="font-semibold text-sm whitespace-nowrap tracking-tight">검수 관리</span>
+            <span className="font-bold text-sm whitespace-nowrap tracking-tight">검수 관리</span>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            'p-1 rounded hover:bg-neutral-800 text-neutral-500',
+            'p-1 rounded-md hover:bg-neutral-800 text-neutral-500 border border-neutral-700',
             collapsed ? 'mx-auto' : 'ml-auto'
           )}
         >
@@ -66,12 +66,12 @@ export default function Sidebar() {
           if ('type' in item && item.type === 'divider') {
             return !collapsed ? (
               <div key={`div-${i}`} className="px-4 pt-5 pb-1">
-                <span className="text-[10px] font-semibold text-neutral-600 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
                   {item.label}
                 </span>
               </div>
             ) : (
-              <div key={`div-${i}`} className="my-2 mx-3 border-t border-neutral-800" />
+              <div key={`div-${i}`} className="my-2 mx-3 border-t-2 border-neutral-800" />
             );
           }
 
@@ -85,15 +85,15 @@ export default function Sidebar() {
               href={nav.href}
               prefetch={true}
               className={cn(
-                'flex items-center gap-3 mx-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                'flex items-center gap-3 mx-2 px-3 py-2 rounded-md text-sm font-medium transition-all',
                 active
-                  ? 'bg-white text-black font-semibold'
-                  : 'text-neutral-400 hover:bg-neutral-900 hover:text-white',
+                  ? 'bg-white text-black border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.8)]'
+                  : 'text-neutral-400 hover:bg-neutral-900 hover:text-white border-2 border-transparent',
                 collapsed && 'justify-center px-2'
               )}
               title={collapsed ? nav.label : undefined}
             >
-              <Icon size={18} />
+              <Icon size={18} strokeWidth={active ? 2.5 : 2} />
               {!collapsed && <span>{nav.label}</span>}
             </Link>
           );
