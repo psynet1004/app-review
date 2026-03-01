@@ -70,9 +70,14 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: { lab
 
   return (
     <div className="relative">
-      <button onClick={() => { setOpen(!open); if (!open) router.push(label === 'AOS' ? '/dev/aos' : '/dev/ios'); }} className="flex items-center gap-2 text-xs border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-md font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0_0_rgba(255,255,255,0.3)] transition-all">
-        <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white" />{label} {selected || '미설정'}<ChevronDown size={12} strokeWidth={3} className={`transition ${open ? 'rotate-180' : ''}`} />
-      </button>
+      <div className="flex items-center border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-md overflow-hidden">
+        <button onClick={() => router.push(label === 'AOS' ? '/dev/aos' : '/dev/ios')} className="flex items-center gap-2 text-xs text-black dark:text-white px-3 py-1.5 font-bold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
+          <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white" />{label} {selected || '미설정'}
+        </button>
+        <button onClick={() => setOpen(!open)} className="px-1.5 py-1.5 border-l-2 border-black dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
+          <ChevronDown size={12} strokeWidth={3} className={`transition text-black dark:text-white ${open ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
       {open && (<>
         <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
         <div className="absolute top-full left-0 mt-2 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)] z-30 min-w-[240px] overflow-hidden">
