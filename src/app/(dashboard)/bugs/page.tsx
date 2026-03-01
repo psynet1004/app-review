@@ -74,8 +74,8 @@ export default function AppBugsPage() {
     {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({platform,id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>},
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-20',align:'center' as const,render:(i:any)=>{
-      if(!i.developer_id)return <span className="text-neutral-300 dark:text-neutral-600">-</span>;
-      const ids=String(i.developer_id).split(',').filter(Boolean);
+      const raw=i.developer_ids||i.developer_id||"";if(!raw)return <span className="text-neutral-300 dark:text-neutral-600">-</span>;
+      const ids=String(raw).split(',').filter(Boolean);
       const names=ids.map((id:string)=>developers.find(d=>d.id===id)?.name).filter(Boolean);
       if(names.length===0)return i.developers?.name||<span className="text-neutral-300 dark:text-neutral-600">-</span>;
       return <span className="text-xs">{names.join(', ')}</span>;
@@ -163,13 +163,13 @@ export default function AppBugsPage() {
 }
 
 function BugModal({supabase,devTeam,editId,platform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_id:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
+  const [f,sf]=useState({version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_ids:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId)sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));},[userName,userDept,editId]);
-  useEffect(()=>{if(editId)supabase.from('bug_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',note:data.note||''});});},[editId]);
+  useEffect(()=>{if(editId)supabase.from('bug_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_ids:data.developer_ids||data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',note:data.note||''});});},[editId]);
   const save=async()=>{
     if(!f.location.trim()){alert('위치 필수');return;}ss(true);
-    const p:any={...f,platform,developer_id:f.developer_id||null};
+    const p:any={...f,platform,developer_ids:f.developer_ids||null,developer_id:null};
     if(!editId) delete p.review_status;
     if(editId)await supabase.from('bug_items').update(p).eq('id',editId);else await supabase.from('bug_items').insert(p);ss(false);onSaved();
   };
@@ -190,7 +190,7 @@ function BugModal({supabase,devTeam,editId,platform,defaultVersion,versionList,u
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Inp l="부서" v={f.department} c={()=>{}} disabled/>
-            <DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devTeam}/>
+            <DevSel l="개발담당" v={f.developer_ids} c={v=>sf(p=>({...p,developer_ids:v}))} devs={devTeam}/>
           </div>
           <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
           {editId && <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>}
