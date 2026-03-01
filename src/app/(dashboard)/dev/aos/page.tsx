@@ -318,7 +318,7 @@ function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
   };
   const toggleGroup = (ids:string[]) => {
     const allSelected = ids.every(id=>selectedIds.includes(id));
-    const next = allSelected ? selectedIds.filter(x=>!ids.includes(x)) : [...new Set([...selectedIds,...ids])];
+    const next = allSelected ? selectedIds.filter(x=>!ids.includes(x)) : Array.from(new Set([...selectedIds,...ids]));
     c(next.join(','));
   };
   const groups:{label:string;items:any[]}[] = [
