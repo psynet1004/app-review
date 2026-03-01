@@ -71,11 +71,9 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: { lab
   return (
     <div className="relative">
       <div className="flex items-center border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-md overflow-hidden">
-        <button onClick={() => router.push(label === 'AOS' ? '/dev/aos' : '/dev/ios')} className="flex items-center gap-2 text-xs text-black dark:text-white px-3 py-1.5 font-bold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
+        <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-xs text-black dark:text-white px-3 py-1.5 font-bold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
           <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white" />{label} {selected || '미설정'}
-        </button>
-        <button onClick={() => setOpen(!open)} className="px-1.5 py-1.5 border-l-2 border-black dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
-          <ChevronDown size={12} strokeWidth={3} className={`transition text-black dark:text-white ${open ? 'rotate-180' : ''}`} />
+          <ChevronDown size={12} strokeWidth={3} className={`transition ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
       {open && (<>
@@ -84,7 +82,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: { lab
           <div className="px-4 py-2 text-[10px] font-black text-neutral-500 uppercase tracking-widest border-b-2 border-black dark:border-neutral-700">{label} 버전</div>
           <div className="max-h-60 overflow-y-auto">
             {versions.map(v => (
-              <div key={v.id} onClick={() => { onSelect(v.version); setOpen(false); }} className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer group transition-all border-b border-neutral-100 dark:border-neutral-800 ${v.version === selected ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}>
+              <div key={v.id} onClick={() => { onSelect(v.version); setOpen(false); router.push(label === 'AOS' ? '/dev/aos' : '/dev/ios'); }} className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer group transition-all border-b border-neutral-100 dark:border-neutral-800 ${v.version === selected ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}>
                 <div className="flex items-center gap-2.5">
                   <span className={`font-bold ${v.version === selected ? '' : 'text-neutral-700 dark:text-neutral-300'}`}>{v.version}</span>
                   {v.is_current && <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border-2 border-red-500 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-black">완료</span>}
