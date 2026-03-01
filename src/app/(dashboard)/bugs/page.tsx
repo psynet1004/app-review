@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
@@ -73,7 +73,13 @@ export default function AppBugsPage() {
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({platform,id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>},
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-20',align:'center' as const,render:(i:any)=>i.developers?.name||<span className="text-neutral-300 dark:text-neutral-600">-</span>},
+    {key:'developer',label:'개발담당',width:'w-20',align:'center' as const,render:(i:any)=>{
+      if(!i.developer_id)return <span className="text-neutral-300 dark:text-neutral-600">-</span>;
+      const ids=String(i.developer_id).split(',').filter(Boolean);
+      const names=ids.map((id:string)=>developers.find(d=>d.id===id)?.name).filter(Boolean);
+      if(names.length===0)return i.developers?.name||<span className="text-neutral-300 dark:text-neutral-600">-</span>;
+      return <span className="text-xs">{names.join(', ')}</span>;
+    }},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
@@ -243,22 +249,55 @@ function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>voi
 }
 
 function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
+  const [open,setOpen]=useState(false);
+  const ref=useRef<HTMLDivElement>(null);
+  const selectedIds = v ? v.split(',').filter(Boolean) : [];
+  const toggle = (id:string) => {
+    const next = selectedIds.includes(id) ? selectedIds.filter(x=>x!==id) : [...selectedIds,id];
+    c(next.join(','));
+  };
+  const toggleGroup = (ids:string[]) => {
+    const allSelected = ids.every(id=>selectedIds.includes(id));
+    const next = allSelected ? selectedIds.filter(x=>!ids.includes(x)) : [...new Set([...selectedIds,...ids])];
+    c(next.join(','));
+  };
   const groups:{label:string;items:any[]}[]=[
-    {label:'AOS',items:devs.filter(d=>d.platform==='AOS')},
-    {label:'iOS',items:devs.filter(d=>d.platform==='iOS')},
-    {label:'서버',items:devs.filter(d=>d.platform==='SERVER')},
+    {label:'AOS팀',items:devs.filter(d=>d.platform==='AOS')},
+    {label:'iOS팀',items:devs.filter(d=>d.platform==='iOS')},
+    {label:'서버팀',items:devs.filter(d=>d.platform==='SERVER')},
   ].filter(g=>g.items.length>0);
+  const names = selectedIds.map(id=>devs.find(d=>d.id===id)?.name).filter(Boolean);
+
+  useEffect(()=>{
+    const handler=(e:MouseEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false);};
+    document.addEventListener('mousedown',handler);return()=>document.removeEventListener('mousedown',handler);
+  },[]);
+
   return(
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-      <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-        <option value="">미배정</option>
-        {groups.map(g=>(
-          <optgroup key={g.label} label={`── ${g.label} ──`}>
-            {g.items.map(d=><option key={d.id} value={d.id}>{d.name} ({d.role})</option>)}
-          </optgroup>
-        ))}
-      </select>
-    </div>
-  );
-}
+    <div ref={ref} className="relative"><label className="block text-xs font-medium text-gray-600 dark:text-neutral-400 mb-1">{l}</label>
+      <button type="button" onClick={()=>setOpen(!open)} className="w-full border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-lg px-3 py-2 text-sm text-left font-medium focus:border-black dark:focus:border-white focus:outline-none flex items-center justify-between">
+        <span className={names.length?'text-black dark:text-white':'text-neutral-400'}>{names.length ? names.join(', ') : '미배정'}</span>
+        <ChevronDown size={14} className={`transition ${open?'rotate-180':''}`}/>
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] max-h-64 overflow-y-auto">
+          <button type="button" onClick={()=>{c('');setOpen(false);}} className={`w-full text-left px-3 py-2 text-sm font-medium border-b border-neutral-200 dark:border-neutral-700 ${selectedIds.length===0?'bg-black text-white dark:bg-white dark:text-black':'hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}>미배정</button>
+          {groups.map(g=>{
+            const gIds=g.items.map(d=>d.id);
+            const allSel=gIds.every(id=>selectedIds.includes(id));
+            return(<div key={g.label}>
+              <button type="button" onClick={()=>toggleGroup(gIds)} className={`w-full text-left px-3 py-2 text-xs font-black uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between ${allSel?'bg-neutral-900 text-white dark:bg-white dark:text-black':'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
+                <span>{g.label} 전체</span>
+                <span className="text-[10px] font-bold">{allSel?'✓ 선택됨':`${g.items.length}명`}</span>
+              </button>
+              {g.items.map(d=>(
+                <button type="button" key={d.id} onClick={()=>toggle(d.id)} className={`w-full text-left px-3 pl-6 py-2 text-sm font-medium border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2 ${selectedIds.includes(d.id)?'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white':'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 text-neutral-700 dark:text-neutral-300'}`}>
+                  <span className={`w-4 h-4 rounded border-2 flex items-center justify-center text-[10px] ${selectedIds.includes(d.id)?'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black':'border-neutral-300 dark:border-neutral-600'}`}>{selectedIds.includes(d.id)?'✓':''}</span>
+                  {d.name} <span className="text-neutral-400 text-xs">({d.role})</span>
+                </button>
+              ))}
+            </div>);
+          })}
+        </div>
+      )}
+    </div>);}
