@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, createContext, useContext, useRef } from 'react';
 import { LogOut, User, ChevronDown, Plus, Trash2, Moon, Sun } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { AppVersion } from '@/lib/types/database';
 import { useDark } from '@/components/layout/DashboardShell';
@@ -61,6 +62,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: { lab
   const [newVer, setNewVer] = useState('');
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
+  const router = useRouter();
   const platform = label as 'AOS' | 'iOS';
   const handleAdd = async () => { if (!newVer.trim()) return; await supabase.from('app_versions').insert({ platform, version: newVer.trim(), is_current: false }); setNewVer(''); refresh(); };
   const handleDelete = async (e: React.MouseEvent, id: string) => { e.stopPropagation(); if (!confirm('삭제?')) return; await supabase.from('app_versions').delete().eq('id', id); refresh(); };
@@ -68,7 +70,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: { lab
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-xs border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-md font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0_0_rgba(255,255,255,0.3)] transition-all">
+      <button onClick={() => { setOpen(!open); if (!open) router.push(label === 'AOS' ? '/dev/aos' : '/dev/ios'); }} className="flex items-center gap-2 text-xs border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-md font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0_0_rgba(255,255,255,0.3)] transition-all">
         <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white" />{label} {selected || '미설정'}<ChevronDown size={12} strokeWidth={3} className={`transition ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (<>
