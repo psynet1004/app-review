@@ -3,10 +3,15 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, Trash2, TestTube, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import type { Developer, WebhookConfig, AppVersion } from '@/lib/types/database';
+
+const ADMIN_EMAIL = 'boongss@psynet.co.kr';
 
 export default function SettingsPage() {
   const supabase = createClient();
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
   const [versions, setVersions] = useState<AppVersion[]>([]);
@@ -23,7 +28,15 @@ export default function SettingsPage() {
     setVersions(ver.data || []);
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }: { data: any }) => {
+      if (data.user?.email !== ADMIN_EMAIL) { router.replace('/'); return; }
+      setAuthorized(true);
+    });
+    loadData();
+  }, []);
+
+  if (!authorized) return null;
 
   return (
     <div>
@@ -186,7 +199,7 @@ function DeveloperManager({ supabase, developers, reload }: { supabase: any; dev
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-28 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         <select value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-          {['AOS','iOS','SERVER','COMMON'].map(p => <option key={p} value={p}>{p}</option>)}
+          {['AOS','iOS','SERVER','QA'].map(p => <option key={p} value={p}>{p}</option>)}
         </select>
         <input type="text" placeholder="역할" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-24 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
