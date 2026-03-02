@@ -44,7 +44,7 @@ export default function SettingsPage() {
 
       <div className="flex gap-2 mb-4">
         {[
-          { key: 'developers' as const, label: '개발자 관리' },
+          { key: 'developers' as const, label: '사용자 관리' },
           { key: 'webhooks' as const, label: 'Webhook 설정' },
           { key: 'versions' as const, label: '버전 관리' },
         ].map(t => (
@@ -277,7 +277,7 @@ function WebhookManager({ supabase, webhooks, reload }: { supabase: any; webhook
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-36 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         <select value={form.target_platform} onChange={e => setForm(f => ({ ...f, target_platform: e.target.value }))}
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-          {['AOS','iOS','SERVER','QA_ALL'].map(p => <option key={p} value={p}>{p}</option>)}
+          {['AOS','iOS','SERVER','QA'].map(p => <option key={p} value={p}>{p}</option>)}
         </select>
         <input type="text" placeholder="Webhook URL" value={form.webhook_url} onChange={e => setForm(f => ({ ...f, webhook_url: e.target.value }))}
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm flex-1 min-w-[200px] focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
