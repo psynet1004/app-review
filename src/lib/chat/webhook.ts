@@ -22,7 +22,7 @@ export function formatDevItemMessage(items: DevItem[], platform: string, version
     `⚡ 필수: ${item.is_required ? '예' : '아니오'}`,
   ].filter(Boolean).join('\n')).join('\n');
 
-  const footer = `\n${divider}\n🔗 바로가기: ${process.env.NEXT_PUBLIC_APP_URL}/dev/${platform.toLowerCase()}`;
+  const footer = `\n${divider}\n🔗 <a href="${process.env.NEXT_PUBLIC_APP_URL}/dev/${platform.toLowerCase()}">LIVE스코어 업데이트 / 검수 바로가기</a>`;
 
   return header + body + footer;
 }
@@ -43,7 +43,7 @@ export function formatBugMessage(items: (BugItem | CommonBug | ServerBug)[], typ
     ].filter(Boolean).join('\n');
   }).join('\n');
 
-  const footer = `\n${divider}\n🔗 바로가기: ${process.env.NEXT_PUBLIC_APP_URL}/bugs`;
+  const footer = `\n${divider}\n🔗 <a href="${process.env.NEXT_PUBLIC_APP_URL}/bugs">LIVE스코어 업데이트 / 검수 바로가기</a>`;
 
   return header + body + footer;
 }
