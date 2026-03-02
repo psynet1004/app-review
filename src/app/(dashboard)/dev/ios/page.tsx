@@ -326,7 +326,8 @@ function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
   const groups:{label:string;items:any[]}[] = [
     {label:'AOS팀', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='AOS')},
     {label:'iOS팀', items:devs.filter(d=>d.department==='개발팀'&&d.platform==='iOS')},
-    {label:'서버팀', items:devs.filter(d=>d.department==='서버(백앤드)')},
+    {label:'서버팀', items:devs.filter(d=>d.department==='서버(백앤드)'||d.department==='서버(시스템)')},
+    {label:'QA팀', items:devs.filter(d=>d.platform==='QA')},
   ].filter(g=>g.items.length>0);
   const names = selectedIds.map(id=>devs.find(d=>d.id===id)?.name).filter(Boolean);
 
