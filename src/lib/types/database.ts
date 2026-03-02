@@ -1,4 +1,4 @@
-export type Platform = 'AOS' | 'iOS' | 'SERVER' | 'COMMON';
+export type Platform = 'AOS' | 'iOS' | 'SERVER' | 'QA';
 export type DevStatus = '대기' | '개발중' | '개발완료' | '검수요청' | '보류';
 export type FixStatus = '미수정' | '수정중' | '수정완료' | '보류';
 export type ReviewStatus = '검수전' | '검수중' | '검수완료';

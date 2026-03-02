@@ -172,12 +172,12 @@ function VersionManager({ supabase, versions, reload }: { supabase: any; version
 }
 
 function DeveloperManager({ supabase, developers, reload }: { supabase: any; developers: Developer[]; reload: () => void }) {
-  const [form, setForm] = useState({ name: '', platform: 'AOS', role: '개발', department: '' });
+  const [form, setForm] = useState({ name: '', platform: 'AOS', role: '개발', department: '', email: '' });
 
   const handleAdd = async () => {
     if (!form.name.trim()) return;
     await supabase.from('developers').insert(form);
-    setForm({ name: '', platform: 'AOS', role: '개발', department: '' });
+    setForm({ name: '', platform: 'AOS', role: '개발', department: '', email: '' });
     reload();
   };
 
@@ -187,16 +187,18 @@ function DeveloperManager({ supabase, developers, reload }: { supabase: any; dev
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('이 개발자를 삭제할까요?')) return;
+    if (!confirm('이 사용자를 삭제할까요?')) return;
     await supabase.from('developers').delete().eq('id', id);
     reload();
   };
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2 flex-wrap">
         <input type="text" placeholder="이름" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-28 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-24 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        <input type="email" placeholder="이메일" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-48 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         <select value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           {['AOS','iOS','SERVER','QA'].map(p => <option key={p} value={p}>{p}</option>)}
@@ -212,7 +214,7 @@ function DeveloperManager({ supabase, developers, reload }: { supabase: any; dev
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
-            {['이름','플랫폼','역할','부서','상태',''].map(h => (
+            {['이름','이메일','플랫폼','역할','부서','상태',''].map(h => (
               <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
             ))}
           </tr>
@@ -221,6 +223,7 @@ function DeveloperManager({ supabase, developers, reload }: { supabase: any; dev
           {developers.map(dev => (
             <tr key={dev.id} className="hover:bg-gray-50">
               <td className="px-3 py-2 font-medium">{dev.name}</td>
+              <td className="px-3 py-2 text-xs text-gray-500">{dev.email || '-'}</td>
               <td className="px-3 py-2"><span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{dev.platform}</span></td>
               <td className="px-3 py-2 text-gray-600">{dev.role}</td>
               <td className="px-3 py-2 text-gray-600">{dev.department}</td>
