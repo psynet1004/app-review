@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const cards = stats ? [
     { label: 'AOS 개발', value: stats.aosCount, icon: Smartphone, accent: false },
     { label: 'iOS 개발', value: stats.iosCount, icon: Apple, accent: false },
-    { label: '앱 오류', value: stats.bugCount, icon: Bug, accent: true },
+    { label: '앱 오류', value: stats.bugCount, icon: Bug, accent: false },
     { label: '공통 오류', value: stats.commonBugCount, icon: AlertTriangle, accent: false },
     { label: '서버 오류', value: stats.serverBugCount, icon: Server, accent: false },
     { label: '미전송', value: stats.unsent, icon: Send, accent: stats.unsent > 0 },
