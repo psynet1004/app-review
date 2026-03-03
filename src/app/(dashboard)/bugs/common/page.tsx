@@ -121,13 +121,14 @@ export default function CommonBugsPage() {
         searchKeys={['location','description','reporter']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'} noBorder
         toolbar={<SendBar/>}/>}
     </div>
-    {showForm&&<BugModal supabase={supabase} devTeam={devTeam} editId={showForm.id} table="common_bugs" title="공통 오류" versionList={allVers} defaultVer={defaultVer} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>}
+    {showForm&&<BugModal supabase={supabase} devTeam={devTeam} editId={showForm.id} table="common_bugs" title="공통 오류" aosVersions={aosVersions} iosVersions={iosVersions} aosVersion={aosVersion} iosVersion={iosVersion} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>}
     {showComment&&<CommentChat itemId={showComment.id} itemType={showComment.type as any} itemTitle={showComment.title} onClose={()=>setShowComment(null)} onCommentAdded={load}/>}
   </div>);
 }
 
-function BugModal({supabase,devTeam,editId,table,title,versionList,defaultVer,userName,userDept,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({version:defaultVer||versionList[0]||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_ids:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
+function BugModal({supabase,devTeam,editId,table,title,aosVersions,iosVersions,aosVersion,iosVersion,userName,userDept,onClose,onSaved,onDel}:any){
+  const defaultVer = '공통';
+  const [f,sf]=useState({version:defaultVer,location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_ids:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId)sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_ids:data.developer_ids||data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',note:data.note||''});});},[editId]);
@@ -135,7 +136,7 @@ function BugModal({supabase,devTeam,editId,table,title,versionList,defaultVer,us
   return(<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
     <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold text-lg">{editId?`${title} 수정`:`${title} 추가`}</h2><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>
     <div className="p-6 space-y-4">
-      <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVer}/>
+      <PlatformVerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} aosVersions={aosVersions} iosVersions={iosVersions} aosVersion={aosVersion} iosVersion={iosVersion} showCommon={true}/>
       <Inp l="이슈 위치 *" v={f.location} c={v=>sf(p=>({...p,location:v}))}/>
       <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
       <div className="grid grid-cols-2 gap-4"><Sel l="우선순위" v={f.priority} c={v=>sf(p=>({...p,priority:v as Priority}))} opts={['긴급','높음','보통','낮음'].map(s=>({v:s,l:s}))}/><Inp l="보고자" v={f.reporter} c={()=>{}} disabled/></div>
@@ -151,6 +152,27 @@ function BugModal({supabase,devTeam,editId,table,title,versionList,defaultVer,us
 function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean;disabled?:boolean}){const cls="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500";return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls} disabled={disabled}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls} disabled={disabled}/>}</div>);}
 function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
 function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>void;versions:string[];defaultVer?:string}){const mainVer=defaultVer||versions[0]||'';const otherVers=versions.filter(ver=>ver!==mainVer);return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">{mainVer&&<option value={mainVer}>{mainVer} (현재)</option>}{v&&v!==mainVer&&!versions.includes(v)&&<option value={v}>{v}</option>}{otherVers.length>0&&<option disabled>── 다른 버전 ──</option>}{otherVers.map(ver=><option key={ver} value={ver}>{ver}</option>)}</select></div>);}
+
+/* ============ PlatformVerSel - 플랫폼별 그룹화 버전 선택 ============ */
+function PlatformVerSel({l,v,c,aosVersions,iosVersions,aosVersion,iosVersion,showCommon,showServer}:{l:string;v:string;c:(v:string)=>void;aosVersions:any[];iosVersions:any[];aosVersion:string;iosVersion:string;showCommon?:boolean;showServer?:boolean}){
+  const aosVers = aosVersions.map((x:any)=>x.version);
+  const iosVers = iosVersions.map((x:any)=>x.version);
+  const aosOther = aosVers.filter((ver:string)=>ver!==aosVersion);
+  const iosOther = iosVers.filter((ver:string)=>ver!==iosVersion);
+  return(<div><label className="block text-xs font-medium text-gray-600 dark:text-neutral-400 mb-1">{l}</label>
+    <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm text-black dark:text-white bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500">
+      {showCommon && <option value="공통">공통</option>}
+      {showServer && <option value="서버">서버</option>}
+      {v && v!=='공통' && v!=='서버' && !aosVers.includes(v) && !iosVers.includes(v) && <option value={v}>{v}</option>}
+      <optgroup label="── AOS ──">
+        {aosVersion && <option value={aosVersion}>{aosVersion} (현재)</option>}
+        {aosOther.map((ver:string)=><option key={`aos-${ver}`} value={ver}>{ver}</option>)}
+      </optgroup>
+      <optgroup label="── iOS ──">
+        {iosVersion && <option value={iosVersion}>{iosVersion} (현재)</option>}
+        {iosOther.map((ver:string)=><option key={`ios-${ver}`} value={ver}>{ver}</option>)}
+      </optgroup>
+    </select></div>);}
 
 /* ============ DevSel - 멀티셀렉트 (팀 전체선택 지원) ============ */
 function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
