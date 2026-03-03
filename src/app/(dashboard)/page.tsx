@@ -37,12 +37,12 @@ export default function DashboardPage() {
   }, []);
 
   const cards = stats ? [
-    { label: 'AOS 개발', value: stats.aosCount, icon: Smartphone, accent: false },
-    { label: 'iOS 개발', value: stats.iosCount, icon: Apple, accent: false },
-    { label: '앱 오류', value: stats.bugCount, icon: Bug, accent: false },
-    { label: '공통 오류', value: stats.commonBugCount, icon: AlertTriangle, accent: false },
-    { label: '서버 오류', value: stats.serverBugCount, icon: Server, accent: false },
-    { label: '미전송', value: stats.unsent, icon: Send, accent: stats.unsent > 0 },
+    { label: 'AOS 개발', value: stats.aosCount, icon: Smartphone, accent: stats.aosCount > 0, color: 'blue' as const },
+    { label: 'iOS 개발', value: stats.iosCount, icon: Apple, accent: stats.iosCount > 0, color: 'blue' as const },
+    { label: '앱 오류', value: stats.bugCount, icon: Bug, accent: stats.bugCount > 0, color: 'red' as const },
+    { label: '공통 오류', value: stats.commonBugCount, icon: AlertTriangle, accent: stats.commonBugCount > 0, color: 'red' as const },
+    { label: '서버 오류', value: stats.serverBugCount, icon: Server, accent: stats.serverBugCount > 0, color: 'red' as const },
+    { label: '미전송', value: stats.unsent, icon: Send, accent: stats.unsent > 0, color: 'red' as const },
   ] : [];
 
   return (
@@ -63,14 +63,14 @@ export default function DashboardPage() {
           {cards.map(card => {
             const Icon = card.icon;
             return (
-              <div key={card.label} className={`bg-white dark:bg-neutral-900 rounded-lg border-2 p-4 transition-all hover:-translate-y-0.5 ${card.accent ? 'border-red-500 shadow-[3px_3px_0_0_rgba(239,68,68,1)]' : 'border-black dark:border-neutral-600 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)]'}`}>
+              <div key={card.label} className={`bg-white dark:bg-neutral-900 rounded-lg border-2 p-4 transition-all hover:-translate-y-0.5 ${card.accent ? (card.color==='blue' ? 'border-blue-500 shadow-[3px_3px_0_0_rgba(59,130,246,1)]' : 'border-red-500 shadow-[3px_3px_0_0_rgba(239,68,68,1)]') : 'border-black dark:border-neutral-600 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)]'}`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className={`w-8 h-8 rounded-md border-2 flex items-center justify-center ${card.accent ? 'bg-red-600 border-red-700' : 'bg-black dark:bg-white border-black dark:border-white'}`}>
+                  <div className={`w-8 h-8 rounded-md border-2 flex items-center justify-center ${card.accent ? (card.color==='blue' ? 'bg-blue-600 border-blue-700' : 'bg-red-600 border-red-700') : 'bg-black dark:bg-white border-black dark:border-white'}`}>
                     <Icon size={15} strokeWidth={2.5} className={card.accent ? 'text-white' : 'text-white dark:text-black'} />
                   </div>
                   <span className="text-xs text-neutral-500 dark:text-neutral-400 font-bold uppercase tracking-wide">{card.label}</span>
                 </div>
-                <p className={`text-3xl font-black ${card.accent && card.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-black dark:text-white'}`}>{card.value}</p>
+                <p className={`text-3xl font-black ${card.accent && card.value > 0 ? (card.color==='blue' ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400') : 'text-black dark:text-white'}`}>{card.value}</p>
               </div>
             );
           })}
