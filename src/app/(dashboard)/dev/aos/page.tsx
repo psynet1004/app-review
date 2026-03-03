@@ -157,6 +157,7 @@ export default function AosPage() {
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isDevReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
     {key:'is_required',label:'필수',width:'w-12',align:'center' as const,render:(i:any)=>i.is_required?<span className="text-xs font-bold text-red-600 dark:text-red-400">Y</span>:<span className="text-neutral-300 dark:text-neutral-600">-</span>},
     {key:'department',label:'부서',width:'w-16',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
+    {key:'requester',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.requester||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><DevReviewSel item={i}/>},
@@ -169,6 +170,7 @@ export default function AosPage() {
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>},
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
+    {key:'reporter',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.reporter||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
@@ -199,6 +201,15 @@ export default function AosPage() {
     loadData();
   };
 
+  const handleBulkDel = async(type:string, ids:Set<string>)=>{
+    if(ids.size===0)return;
+    if(!confirm(ids.size+'\uac74\uc744 \uc0ad\uc81c\ud560\uae4c\uc694?'))return;
+    const tbl = type==='dev'?'dev_items':type==='bug'?'bug_items':type==='common'?'common_bugs':'server_bugs';
+    for(const id of ids) await supabase.from(tbl).delete().eq('id',id);
+    if(type==='dev')setSelDev(new Set()); else if(type==='bug')setSelBug(new Set()); else if(type==='common')setSelCommon(new Set()); else setSelServer(new Set());
+    loadData();
+  };
+
   const handleDel = async(type:string,id:string)=>{
     if(!confirm('삭제할까요?'))return;
     const tbl = type==='dev'?'dev_items':type==='bug'?'bug_items':type==='common'?'common_bugs':'server_bugs';
@@ -217,10 +228,13 @@ export default function AosPage() {
     </div>
   );
 
-  const SendBar = ({ids,onSend}:{ids:Set<string>;onSend:()=>void}) => ids.size > 0 ? (
-    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-neutral-100 dark:border-neutral-800">
+  const SendBar = ({ids,onSend,onDelete}:{ids:Set<string>;onSend:()=>void;onDelete:()=>void}) => ids.size > 0 ? (
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
       <button onClick={onSend} className="flex items-center gap-1 bg-black text-white text-xs px-3 py-1.5 rounded-md border-2 border-black font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] dark:bg-white dark:text-black dark:border-white">
         <Send size={12}/>선택 전송 ({ids.size})
+      </button>
+      <button onClick={onDelete} className="flex items-center gap-1 bg-red-600 text-white text-xs px-3 py-1.5 rounded-md border-2 border-red-700 font-bold hover:bg-red-700">
+        🗑 선택 삭제 ({ids.size})
       </button>
     </div>
   ) : null;
@@ -237,28 +251,28 @@ export default function AosPage() {
       <SectionHeader title="📋 개발항목" count={devItems.length} color="cel-dev" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
       {!collapsed.dev && <DataTable data={devItems} columns={devCols} selectable selectedIds={selDev} onSelectionChange={setSelDev}
         searchKeys={['menu_item','description','department']} searchPlaceholder="개발항목 검색..." emptyMessage={loading?'로딩 중...':'등록된 항목 없음'}
-        toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)}/>}/>}
+        toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)} onDelete={()=>handleBulkDel('dev',selDev)}/>}/>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="cel-bug" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
       {!collapsed.bug && <DataTable data={bugItems} columns={bugCols} selectable selectedIds={selBug} onSelectionChange={setSelBug}
         searchKeys={['location','description','reporter']} searchPlaceholder="앱 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)}/>}/>}
+        toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)} onDelete={()=>handleBulkDel('bug',selBug)}/>}/>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="cel-common" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
       {!collapsed.common && <DataTable data={commonItems} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
         searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)}/>}/>}
+        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)} onDelete={()=>handleBulkDel('common',selCommon)}/>}/>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="cel-server" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
       {!collapsed.server && <DataTable data={serverItems} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
         searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)}/>}/>}
+        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)}/>}/>}
     </div>
 
     {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}

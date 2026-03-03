@@ -102,12 +102,18 @@ export default function AppBugsPage() {
     {key:'priority',label:'우선순위',width:'w-20',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({platform,id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>},
     {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
+    {key:'reporter',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.reporter||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="bug_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'bug_items',title:i.location})}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
+  const handleBulkDel=async(p:'AOS'|'iOS', ids:Set<string>)=>{
+    if(ids.size===0)return;if(!confirm(ids.size+'건 삭제?'))return;
+    for(const id of ids) await supabase.from('bug_items').delete().eq('id',id);
+    if(p==='AOS')setSelAos(new Set()); else setSelIos(new Set());loadData();
+  };
   const handleDel=async(id:string)=>{if(!confirm('삭제?'))return;await supabase.from('bug_items').delete().eq('id',id);afterSave();};
 
   const handleSend = async(platform:'AOS'|'iOS', ids:Set<string>)=>{
@@ -130,10 +136,13 @@ export default function AppBugsPage() {
     </div>
   );
 
-  const SendBar = ({ids,onSend}:{ids:Set<string>;onSend:()=>void}) => ids.size > 0 ? (
+  const SendBar = ({ids,onSend,onDelete}:{ids:Set<string>;onSend:()=>void;onDelete:()=>void}) => ids.size > 0 ? (
     <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-neutral-100 dark:border-neutral-800">
       <button onClick={onSend} className="flex items-center gap-1 bg-black text-white text-xs px-3 py-1.5 rounded-md border-2 border-black font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] dark:bg-white dark:text-black dark:border-white">
         <Send size={12}/>선택 전송 ({ids.size})
+      </button>
+      <button onClick={onDelete} className="flex items-center gap-1 bg-red-600 text-white text-xs px-3 py-1.5 rounded-md border-2 border-red-700 font-bold hover:bg-red-700">
+        🗑 선택 삭제 ({ids.size})
       </button>
     </div>
   ) : null;
@@ -151,13 +160,13 @@ export default function AppBugsPage() {
         <SectionHeader title="📱 AOS 앱 오류" count={aosBugs.length} sectionKey="aos" onAdd={()=>setShowForm({platform:'AOS'})}/>
         {!collapsed.aos && <DataTable data={aosBugs} columns={makeCols('AOS')} selectable selectedIds={selAos} onSelectionChange={setSelAos}
           searchKeys={['location','description']} searchPlaceholder="AOS 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'} noBorder
-          toolbar={<SendBar ids={selAos} onSend={()=>handleSend('AOS',selAos)}/>}/>}
+          toolbar={<SendBar ids={selAos} onSend={()=>handleSend('AOS',selAos)} onDelete={()=>handleBulkDel('AOS',selAos)}/>}/>}
       </div>
       <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] bg-white dark:bg-neutral-950 overflow-hidden">
         <SectionHeader title="🍎 iOS 앱 오류" count={iosBugs.length} sectionKey="ios" onAdd={()=>setShowForm({platform:'iOS'})}/>
         {!collapsed.ios && <DataTable data={iosBugs} columns={makeCols('iOS')} selectable selectedIds={selIos} onSelectionChange={setSelIos}
           searchKeys={['location','description']} searchPlaceholder="iOS 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'} noBorder
-          toolbar={<SendBar ids={selIos} onSend={()=>handleSend('iOS',selIos)}/>}/>}
+          toolbar={<SendBar ids={selIos} onSend={()=>handleSend('iOS',selIos)} onDelete={()=>handleBulkDel('iOS',selIos)}/>}/>}
       </div>
       {showForm && <BugModal supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={showForm.platform}
         defaultVersion={getDefaultVer(showForm.platform)} versionList={getVersionList(showForm.platform)}
