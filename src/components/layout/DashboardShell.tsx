@@ -18,6 +18,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [iosVersion, setIosVersion] = useState('');
   const [userName, setUserName] = useState('');
   const [userDept, setUserDept] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -56,7 +57,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       if (u) {
         const name = u.user_metadata?.full_name || u.email || '';
         setUserName(name);
-        const email = u.email?.toLowerCase();
+        const email = u.email?.toLowerCase() || '';
+        setUserEmail(email);
         if (email) {
           const { data: dev }: { data: any } = await supabase
             .from('developers')
@@ -76,7 +78,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           aosVersion, iosVersion, setAosVersion, setIosVersion,
           aosVersions: versions.filter(v => v.platform === 'AOS'),
           iosVersions: versions.filter(v => v.platform === 'iOS'),
-          refreshVersions: loadVersions, userName, userDept,
+          refreshVersions: loadVersions, userName, userDept, userEmail,
         }}
       >
         <div id="dashboard-shell" className="bg-stone-100 dark:bg-neutral-950">

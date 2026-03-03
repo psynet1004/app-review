@@ -8,6 +8,9 @@ import {
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useVersion } from '@/components/layout/Header';
+
+const ADMIN_EMAILS = ['boongss@psynet.co.kr'];
 
 const navItems = [
   { label: '대시보드', href: '/', icon: LayoutDashboard },
@@ -18,9 +21,9 @@ const navItems = [
   { label: '앱 오류', href: '/bugs', icon: Bug },
   { label: '공통 오류', href: '/bugs/common', icon: AlertTriangle },
   { label: '서버 오류', href: '/bugs/server', icon: Server },
-  { type: 'divider' as const, label: '관리' },
-  { label: '전송 이력', href: '/logs', icon: ScrollText },
-  { label: '설정', href: '/settings', icon: Settings },
+  { type: 'divider' as const, label: '관리', adminOnly: true },
+  { label: '전송 이력', href: '/logs', icon: ScrollText, adminOnly: true },
+  { label: '설정', href: '/settings', icon: Settings, adminOnly: true },
 ];
 
 function isActive(href: string, pathname: string): boolean {
@@ -32,6 +35,10 @@ function isActive(href: string, pathname: string): boolean {
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { userEmail } = useVersion();
+  const isAdmin = ADMIN_EMAILS.includes(userEmail?.toLowerCase());
+
+  const visibleItems = navItems.filter(item => !('adminOnly' in item && item.adminOnly) || isAdmin);
 
   return (
     <aside
@@ -62,7 +69,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 py-3 overflow-y-auto">
-        {navItems.map((item, i) => {
+        {visibleItems.map((item, i) => {
           if ('type' in item && item.type === 'divider') {
             return !collapsed ? (
               <div key={`div-${i}`} className="px-4 pt-5 pb-1">

@@ -3,9 +3,10 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
-import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
 import { useVersion } from '@/components/layout/Header';
 import type { DevStatus, FixStatus, Priority, ReviewStatus } from '@/lib/types/database';
+import { CommentChat, CommentBadge } from '@/components/common/CommentChat';
 
 const PLATFORM = 'iOS';
 const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
@@ -13,7 +14,7 @@ const EXCLUDED_DEPTS = ['서버(시스템)','재무','데이터/광고','AIAE','
 
 export default function AosPage() {
   const supabase = createClient();
-  const { aosVersion: selectedVer, aosVersions: allVersions, userName, userDept } = useVersion();
+  const { iosVersion: selectedVer, iosVersions: allVersions, userName, userDept, userEmail } = useVersion();
   const [rawDev, setRawDev] = useState<any[]>([]);
   const [rawBug, setRawBug] = useState<any[]>([]);
   const [rawCommon, setRawCommon] = useState<any[]>([]);
@@ -22,6 +23,9 @@ export default function AosPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState<{type:'dev'|'bug'|'common'|'server';id?:string}|null>(null);
   const [collapsed, setCollapsed] = useState<Record<string,boolean>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string,number>>({});
+  const [commentNew, setCommentNew] = useState<Record<string,boolean>>({});
+  const [showComment, setShowComment] = useState<{id:string;type:string;title:string}|null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -34,6 +38,26 @@ export default function AosPage() {
     ]);
     setRawDev(d.data||[]); setRawBug(b.data||[]); setRawCommon(c.data||[]); setRawServer(s.data||[]);
     setDevelopers(devs.data||[]); setLoading(false);
+    // Load comment counts
+    const allIds = [...(d.data||[]),...(b.data||[]),...(c.data||[]),...(s.data||[])].map(i=>i.id);
+    if(allIds.length>0){
+      const {data:counts}=await supabase.from('comments').select('item_id').in('item_id',allIds);
+      const cMap:Record<string,number>={};
+      (counts||[]).forEach((c:any)=>{cMap[c.item_id]=(cMap[c.item_id]||0)+1;});
+      setCommentCounts(cMap);
+      // Check new comments
+      if(userEmail){
+        const {data:reads}=await supabase.from('comment_reads').select('item_id,last_read_at').eq('user_email',userEmail).in('item_id',allIds);
+        const readMap:Record<string,string>={};
+        (reads||[]).forEach((r:any)=>{readMap[r.item_id]=r.last_read_at;});
+        const {data:latest}=await supabase.from('comments').select('item_id,created_at').in('item_id',allIds).order('created_at',{ascending:false});
+        const latestMap:Record<string,string>={};
+        (latest||[]).forEach((l:any)=>{if(!latestMap[l.item_id])latestMap[l.item_id]=l.created_at;});
+        const nMap:Record<string,boolean>={};
+        allIds.forEach(id=>{if(latestMap[id]&&(!readMap[id]||new Date(latestMap[id])>new Date(readMap[id])))nMap[id]=true;});
+        setCommentNew(nMap);
+      }
+    }
   },[]);
 
   useEffect(()=>{loadData();},[loadData]);
@@ -136,6 +160,7 @@ export default function AosPage() {
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><DevReviewSel item={i}/>},
+    {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="dev_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'dev_items',title:i.menu_item})}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
 
@@ -147,17 +172,20 @@ export default function AosPage() {
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
+    {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="bug_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'bug_items',title:i.location})}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
 
   const commonCols = bugCols.map(c=>{
     if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'common',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>};
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="common_bugs"/>};
+    if(c.key==='comments') return {...c,render:(i:any)=><CommentBadge itemId={i.id} itemType="common_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'common_bugs',title:i.location})}/>};
     return c;
   });
   const serverCols = bugCols.map(c=>{
     if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'server',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>};
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="server_bugs"/>};
+    if(c.key==='comments') return {...c,render:(i:any)=><CommentBadge itemId={i.id} itemType="server_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'server_bugs',title:i.location})}/>};
     return c;
   });
 
@@ -201,7 +229,7 @@ export default function AosPage() {
 
   return (<div className="space-y-6">
     <div>
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white">iOS</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white">AOS</h1>
       {selectedVer && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
     </div>
 
@@ -237,6 +265,7 @@ export default function AosPage() {
     {showForm?.type==='bug'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="bug_items" hasPlatform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('bug',id)}/>}
     {showForm?.type==='common'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="common_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('common',id)}/>}
     {showForm?.type==='server'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="server_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('server',id)}/>}
+    {showComment&&<CommentChat itemId={showComment.id} itemType={showComment.type as any} itemTitle={showComment.title} onClose={()=>setShowComment(null)} onCommentAdded={loadData}/>}
   </div>);
 }
 

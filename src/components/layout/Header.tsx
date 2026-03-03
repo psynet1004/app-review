@@ -12,10 +12,10 @@ export const VersionContext = createContext<{
   aosVersion: string; iosVersion: string;
   setAosVersion: (v: string) => void; setIosVersion: (v: string) => void;
   aosVersions: AppVersion[]; iosVersions: AppVersion[];
-  refreshVersions: () => void; userName: string; userDept: string;
+  refreshVersions: () => void; userName: string; userDept: string; userEmail: string;
 }>({
   aosVersion: '', iosVersion: '', setAosVersion: () => {}, setIosVersion: () => {},
-  aosVersions: [], iosVersions: [], refreshVersions: () => {}, userName: '', userDept: '',
+  aosVersions: [], iosVersions: [], refreshVersions: () => {}, userName: '', userDept: '', userEmail: '',
 });
 
 export function useVersion() { return useContext(VersionContext); }

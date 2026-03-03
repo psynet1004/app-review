@@ -1,0 +1,16 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/api/send/bug-items/route": "app/api/send/bug-items/route.js",
+  "/auth/callback/route": "app/auth/callback/route.js",
+  "/api/send/dev-items/route": "app/api/send/dev-items/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/(dashboard)/dev/ios/page": "app/(dashboard)/dev/ios/page.js",
+  "/(dashboard)/logs/page": "app/(dashboard)/logs/page.js",
+  "/(dashboard)/bugs/common/page": "app/(dashboard)/bugs/common/page.js",
+  "/(dashboard)/dev/aos/page": "app/(dashboard)/dev/aos/page.js",
+  "/(dashboard)/bugs/page": "app/(dashboard)/bugs/page.js",
+  "/(dashboard)/bugs/server/page": "app/(dashboard)/bugs/server/page.js",
+  "/(dashboard)/page": "app/(dashboard)/page.js",
+  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js"
+}
