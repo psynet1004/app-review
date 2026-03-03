@@ -32,14 +32,14 @@ export function StatusBadge({ status, type = 'dev' }: { status: string; type?: '
   return <span className={cn('inline-flex px-2.5 py-0.5 rounded-md text-xs font-bold whitespace-nowrap border-2', color)}>{status}</span>;
 }
 
-const priorityConfig: Record<Priority, { color: string; dot: string }> = {
-  '긴급': { color: 'text-red-600 dark:text-red-400 font-black', dot: 'bg-red-500 border border-red-700' },
-  '높음': { color: 'text-black dark:text-white font-bold', dot: 'bg-black dark:bg-white' },
-  '보통': { color: 'text-neutral-500 dark:text-neutral-400 font-medium', dot: 'bg-neutral-400' },
-  '낮음': { color: 'text-neutral-400 dark:text-neutral-500', dot: 'bg-neutral-300 dark:bg-neutral-600' },
+const priorityConfig: Record<Priority, { color: string; dot: string; bg: string }> = {
+  '긴급': { color: 'text-red-700 dark:text-red-400 font-black', dot: 'bg-red-500 border border-red-700 animate-pulse', bg: 'bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-800' },
+  '높음': { color: 'text-orange-700 dark:text-orange-300 font-bold', dot: 'bg-orange-500 dark:bg-orange-400', bg: 'bg-orange-50 border border-orange-200 dark:bg-orange-900/30 dark:border-orange-800' },
+  '보통': { color: 'text-neutral-600 dark:text-neutral-400 font-medium', dot: 'bg-neutral-400', bg: 'bg-neutral-50 border border-neutral-200 dark:bg-neutral-800/50 dark:border-neutral-700' },
+  '낮음': { color: 'text-neutral-400 dark:text-neutral-500', dot: 'bg-neutral-300 dark:bg-neutral-600', bg: 'bg-neutral-50/50 border border-neutral-100 dark:bg-neutral-800/30 dark:border-neutral-700' },
 };
 
 export function PriorityTag({ priority }: { priority: Priority }) {
   const config = priorityConfig[priority] || priorityConfig['보통'];
-  return <span className={cn('inline-flex items-center gap-1.5 text-xs', config.color)}><span className={cn('w-2 h-2 rounded-full', config.dot)} />{priority}</span>;
+  return <span className={cn('inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-md', config.color, config.bg)}><span className={cn('w-2 h-2 rounded-full', config.dot)} />{priority}</span>;
 }

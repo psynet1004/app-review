@@ -108,14 +108,34 @@ export default function AosPage() {
   // 검수완료 시 취소선
   const isReviewed = (item:any) => item.fix_status==='수정완료' && item.review_status==='검수완료';
 
+  // 개발항목 검수상태 인라인 변경
+  const handleDevReviewChange = async(id:string, val:ReviewStatus) => {
+    await supabase.from('dev_items').update({review_status:val}).eq('id',id);
+    loadData();
+  };
+  const DevReviewSel = ({item}:{item:any}) => (
+    <select value={item.review_status||'검수전'} onChange={e=>handleDevReviewChange(item.id,e.target.value as ReviewStatus)}
+      className="text-xs border border-neutral-200 dark:border-neutral-800 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400"
+      onClick={e=>e.stopPropagation()}>
+      <option value="검수전">검수전</option>
+      <option value="검수중">검수중</option>
+      <option value="검수완료">검수완료</option>
+    </select>
+  );
+
+  const isDevReviewed = (item:any) => item.dev_status==='개발완료' && item.review_status==='검수완료';
+
   const devCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
-    {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({type:'dev',id:i.id})} className="text-neutral-900 dark:text-white hover:underline font-medium text-left">{i.menu_item}</button>},
-    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className="text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1">{i.description||'-'}</span>},
+    {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><div><button onClick={()=>setShowForm({type:'dev',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isDevReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.menu_item}</button>
+      {i.planning_link_url && <a href={i.planning_link_url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="ml-2 inline-flex items-center gap-0.5 text-[10px] text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">📎 {i.planning_link_name||'링크'}</a>}
+    </div>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isDevReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
     {key:'is_required',label:'필수',width:'w-12',align:'center' as const,render:(i:any)=>i.is_required?<span className="text-xs font-bold text-red-600 dark:text-red-400">Y</span>:<span className="text-neutral-300 dark:text-neutral-600">-</span>},
     {key:'department',label:'부서',width:'w-16',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
+    {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><DevReviewSel item={i}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
 
@@ -222,11 +242,11 @@ export default function AosPage() {
 
 /* ============ DevForm ============ */
 function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_ids:'',dev_status:'대기' as DevStatus,note:''});
+  const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_ids:'',dev_status:'대기' as DevStatus,review_status:'검수전' as ReviewStatus,planning_link_url:'',planning_link_name:'',note:''});
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
-  useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_ids:data.developer_ids||data.developer_id||'',dev_status:data.dev_status||'대기',note:data.note||''});});},[editId]);
-  const save=async()=>{if(!f.menu_item.trim()){alert('항목명 필수');return;}ss(true);const p={...f,platform,developer_ids:f.developer_ids||null,developer_id:null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else await supabase.from('dev_items').insert(p);ss(false);onSaved();};
+  useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_ids:data.developer_ids||data.developer_id||'',dev_status:data.dev_status||'대기',review_status:data.review_status||'검수전',planning_link_url:data.planning_link_url||'',planning_link_name:data.planning_link_name||'',note:data.note||''});});},[editId]);
+  const save=async()=>{if(!f.menu_item.trim()){alert('항목명 필수');return;}ss(true);const p:any={...f,platform,developer_ids:f.developer_ids||null,developer_id:null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else{delete p.review_status;await supabase.from('dev_items').insert(p);}ss(false);onSaved();};
   return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVersion}/>
@@ -235,7 +255,17 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
     <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
     <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={()=>{}} disabled/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
     <DevSel l="개발담당" v={f.developer_ids} c={v=>sf(p=>({...p,developer_ids:v}))} devs={devTeam}/>
-    <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
+    <div className="grid grid-cols-2 gap-4">
+      <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
+      {editId && <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>}
+    </div>
+    <div className="space-y-2">
+      <label className="block text-xs font-medium text-gray-600 mb-1">📎 참고 링크</label>
+      <div className="grid grid-cols-2 gap-2">
+        <input type="text" value={f.planning_link_name} onChange={e=>sf(p=>({...p,planning_link_name:e.target.value}))} placeholder="링크 이름 (예: 기획서)" className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+        <input type="text" value={f.planning_link_url} onChange={e=>sf(p=>({...p,planning_link_url:e.target.value}))} placeholder="URL 입력" className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+      </div>
+    </div>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="rounded"/>필수 항목</label>
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
