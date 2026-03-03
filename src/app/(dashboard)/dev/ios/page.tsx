@@ -205,7 +205,7 @@ export default function AosPage() {
     if(ids.size===0)return;
     if(!confirm(ids.size+'건을 삭제할까요?'))return;
     const tbl = type==='dev'?'dev_items':type==='bug'?'bug_items':type==='common'?'common_bugs':'server_bugs';
-    for(const id of ids) await supabase.from(tbl).delete().eq('id',id);
+    for(const id of Array.from(ids)) await supabase.from(tbl).delete().eq('id',id);
     if(type==='dev')setSelDev(new Set()); else if(type==='bug')setSelBug(new Set()); else if(type==='common')setSelCommon(new Set()); else setSelServer(new Set());
     loadData();
   };

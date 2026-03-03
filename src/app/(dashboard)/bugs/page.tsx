@@ -111,7 +111,7 @@ export default function AppBugsPage() {
   ];
   const handleBulkDel=async(p:'AOS'|'iOS', ids:Set<string>)=>{
     if(ids.size===0)return;if(!confirm(ids.size+'건 삭제?'))return;
-    for(const id of ids) await supabase.from('bug_items').delete().eq('id',id);
+    for(const id of Array.from(ids)) await supabase.from('bug_items').delete().eq('id',id);
     if(p==='AOS')setSelAos(new Set()); else setSelIos(new Set());loadData();
   };
   const handleDel=async(id:string)=>{if(!confirm('삭제?'))return;await supabase.from('bug_items').delete().eq('id',id);afterSave();};

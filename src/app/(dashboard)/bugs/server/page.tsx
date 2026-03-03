@@ -51,7 +51,7 @@ export default function ServerBugsPage() {
   const defaultVer = aosVersion || iosVersion || allVers[0] || '';
   const closeForm=()=>setShowForm(null);
   const afterSave=()=>{closeForm();load();};
-  const handleBulkDel=async()=>{if(selected.size===0)return;if(!confirm(selected.size+'건 삭제?'))return;for(const id of selected) await supabase.from('server_bugs').delete().eq('id',id);setSelected(new Set());load();};
+  const handleBulkDel=async()=>{if(selected.size===0)return;if(!confirm(selected.size+'건 삭제?'))return;for(const id of Array.from(selected)) await supabase.from('server_bugs').delete().eq('id',id);setSelected(new Set());load();};
   const handleDel=async(id:string)=>{if(!confirm('삭제?'))return;await supabase.from('server_bugs').delete().eq('id',id);afterSave();};
 
   const handleSend = async()=>{
