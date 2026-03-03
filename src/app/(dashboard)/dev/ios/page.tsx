@@ -76,7 +76,7 @@ export default function AosPage() {
     const curIdx = verList.indexOf(selectedVer);
     const olderVers = curIdx >= 0 ? verList.slice(curIdx + 1) : [];
     const incomplete = statusField === 'dev_status'
-      ? ['대기','개발중','보류','검수요청']
+      ? ['대기','개발중','보류','배포완료']
       : ['미수정','수정중','보류'];
     const carried = items
       .filter(i => olderVers.includes(i.version) && incomplete.includes(i[statusField]))
@@ -285,7 +285,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
     <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={()=>{}} disabled/><Inp l="담당자" v={f.requester} c={v=>sf(p=>({...p,requester:v}))}/></div>
     <DevSel l="개발담당" v={f.developer_ids} c={v=>sf(p=>({...p,developer_ids:v}))} devs={devTeam}/>
     <div className="grid grid-cols-2 gap-4">
-      <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','검수요청','보류'].map(s=>({v:s,l:s}))}/>
+      <Sel l="상태" v={f.dev_status} c={v=>sf(p=>({...p,dev_status:v as DevStatus}))} opts={['대기','개발중','개발완료','배포완료','보류'].map(s=>({v:s,l:s}))}/>
       {editId && <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>}
     </div>
     <div className="space-y-2">
