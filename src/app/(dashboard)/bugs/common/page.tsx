@@ -1,13 +1,14 @@
 'use client';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
-import { Plus, Send, X } from 'lucide-react';
+import { Send, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useVersion } from '@/components/layout/Header';
 import type { Priority, FixStatus, ReviewStatus } from '@/lib/types/database';
 
 const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
+const EXCLUDED_DEPTS = ['서버(시스템)','재무','데이터/광고','AIAE','운영'];
 
 export default function CommonBugsPage() {
   const supabase = createClient();
@@ -17,6 +18,7 @@ export default function CommonBugsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState<{id?:string}|null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
     const [i, d] = await Promise.all([
@@ -26,12 +28,30 @@ export default function CommonBugsPage() {
     setItems(i.data||[]); setDevs(d.data||[]); setLoading(false);
   },[]);
   useEffect(()=>{load();},[load]);
-  const devTeam = useMemo(()=>devs.filter(d=>['개발팀','서버(백앤드)'].includes(d.department)&&!EXCLUDED_ROLES.includes(d.role)),[devs]);
+  const devTeam = useMemo(()=>devs.filter(d=>['개발팀','서버(백앤드)'].includes(d.department)&&!EXCLUDED_ROLES.includes(d.role)&&!EXCLUDED_DEPTS.includes(d.department)),[devs]);
   const allVers = Array.from(new Set(aosVersions.map(v=>v.version).concat(iosVersions.map(v=>v.version))));
   const defaultVer = aosVersion || iosVersion || allVers[0] || '';
   const closeForm=()=>setShowForm(null);
   const afterSave=()=>{closeForm();load();};
   const handleDel=async(id:string)=>{if(!confirm('삭제?'))return;await supabase.from('common_bugs').delete().eq('id',id);afterSave();};
+
+  const handleSend = async()=>{
+    if(selected.size===0)return;
+    if(!confirm(`${selected.size}건을 전송할까요?`))return;
+    await fetch('/api/send/bug-items',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({itemIds:Array.from(selected),platform:'COMMON'})});
+    alert('전송 완료!');
+    setSelected(new Set());
+    load();
+  };
+
+  const getDevNames = (item:any) => {
+    const raw = item.developer_ids || item.developer_id || "";
+    if (!raw) return <span className="text-neutral-300 dark:text-neutral-600">-</span>;
+    const ids = String(raw).split(",").filter(Boolean);
+    const names = ids.map((id:string) => devs.find(d=>d.id===id)?.name).filter(Boolean);
+    if (names.length === 0) return item.developers?.name || <span className="text-neutral-300 dark:text-neutral-600">-</span>;
+    return <span className="text-xs">{names.join(", ")}</span>;
+  };
 
   const handleReviewChange = async(id:string, val:ReviewStatus) => {
     await supabase.from('common_bugs').update({review_status:val}).eq('id',id);
@@ -39,7 +59,7 @@ export default function CommonBugsPage() {
   };
   const ReviewSel = ({item}:{item:any}) => (
     <select value={item.review_status||'검수전'} onChange={e=>handleReviewChange(item.id,e.target.value as ReviewStatus)}
-      className="text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-400" onClick={e=>e.stopPropagation()}>
+      className="text-xs border border-neutral-200 dark:border-neutral-800 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400" onClick={e=>e.stopPropagation()}>
       <option value="검수전">검수전</option><option value="검수중">검수중</option><option value="검수완료">검수완료</option>
     </select>
   );
@@ -47,44 +67,59 @@ export default function CommonBugsPage() {
 
   const cols = [
     {key:'version',label:'버전',width:'w-20',sortable:true},
-    {key:'priority',label:'우선순위',width:'w-20',sortable:true,render:(i:any)=><PriorityTag priority={i.priority}/>},
-    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({id:i.id})} className={`text-blue-600 hover:underline font-medium text-left ${isReviewed(i)?'line-through text-gray-400':''}`}>{i.location}</button>},
-    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-gray-500 text-xs line-clamp-1 ${isReviewed(i)?'line-through':''}`}>{i.description||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-20',render:(i:any)=>i.developers?.name||<span className="text-gray-300">-</span>},
-    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
-    {key:'review_status',label:'검수',width:'w-24',render:(i:any)=><ReviewSel item={i}/>},
-    {key:'send_status',label:'전송',width:'w-20',render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
+    {key:'priority',label:'우선순위',width:'w-20',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
+    {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
+    {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
+    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
+    {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
+    {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
-  return(<div className="space-y-4">
-    <div className="flex items-center justify-between">
-      <div><h1 className="text-xl font-bold text-gray-900">공통 오류</h1><p className="text-xs text-gray-500 mt-0.5">AOS + iOS 양쪽 공통 오류</p></div>
-      <button onClick={()=>setShowForm({})} className="flex items-center gap-1.5 bg-orange-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-orange-700"><Plus size={16}/>오류 추가</button>
+
+  const SendBar = () => selected.size > 0 ? (
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-neutral-100 dark:border-neutral-800">
+      <button onClick={handleSend} className="flex items-center gap-1 bg-black text-white text-xs px-3 py-1.5 rounded-md border-2 border-black font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] dark:bg-white dark:text-black dark:border-white">
+        <Send size={12}/>선택 전송 ({selected.size})
+      </button>
     </div>
-    <DataTable data={items} columns={cols} selectable selectedIds={selected} onSelectionChange={setSelected}
-      searchKeys={['location','description','reporter']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'}
-      toolbar={selected.size>0?<button className="flex items-center gap-1 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg"><Send size={12}/>선택 전송 ({selected.size})</button>:undefined}/>
+  ) : null;
+
+  return(<div className="space-y-6">
+    <div>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white">공통 오류</h1>
+      <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">AOS + iOS 양쪽 공통 오류</p>
+    </div>
+    <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] bg-white dark:bg-neutral-950 overflow-hidden">
+      <div className="flex items-center justify-between py-3 px-4 bg-black dark:bg-neutral-800 rounded-t-md cursor-pointer select-none border-b-2 border-black dark:border-neutral-700" onClick={()=>setCollapsed(!collapsed)}>
+        <div className="flex items-center gap-2">
+          {collapsed?<ChevronDown size={16} className="text-white/70"/>:<ChevronUp size={16} className="text-white/70"/>}
+          <h2 className="text-sm font-bold text-white">⚠️ 공통 오류</h2>
+          <span className="text-xs text-white/70 bg-white/20 px-2 py-0.5 rounded-full">{items.length}건</span>
+        </div>
+        <button onClick={e=>{e.stopPropagation();setShowForm({});}} className="text-xs bg-white text-black font-bold px-3 py-1 rounded-md border-2 border-white hover:shadow-[2px_2px_0_0_rgba(255,255,255,0.5)] transition-all">+ 추가</button>
+      </div>
+      {!collapsed && <DataTable data={items} columns={cols} selectable selectedIds={selected} onSelectionChange={setSelected}
+        searchKeys={['location','description','reporter']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'} noBorder
+        toolbar={<SendBar/>}/>}
+    </div>
     {showForm&&<BugModal supabase={supabase} devTeam={devTeam} editId={showForm.id} table="common_bugs" title="공통 오류" versionList={allVers} defaultVer={defaultVer} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>}
   </div>);
 }
+
 function BugModal({supabase,devTeam,editId,table,title,versionList,defaultVer,userName,userDept,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({version:defaultVer||versionList[0]||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_id:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
+  const [f,sf]=useState({version:defaultVer||versionList[0]||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_ids:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId)sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));},[userName,userDept,editId]);
-  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_id:data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',note:data.note||''});});},[editId]);
-  const save=async()=>{
-    if(!f.location.trim()){alert('위치 필수');return;}ss(true);
-    const p:any={...f,developer_id:f.developer_id||null};
-    if(!editId) delete p.review_status;
-    if(editId)await supabase.from(table).update(p).eq('id',editId);else await supabase.from(table).insert(p);ss(false);onSaved();
-  };
-  return(<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_ids:data.developer_ids||data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',note:data.note||''});});},[editId]);
+  const save=async()=>{if(!f.location.trim()){alert('위치 필수');return;}ss(true);const p:any={...f,developer_ids:f.developer_ids||null,developer_id:null};if(!editId)delete p.review_status;if(editId)await supabase.from(table).update(p).eq('id',editId);else await supabase.from(table).insert(p);ss(false);onSaved();};
+  return(<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
     <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold text-lg">{editId?`${title} 수정`:`${title} 추가`}</h2><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>
     <div className="p-6 space-y-4">
       <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVer}/>
       <Inp l="이슈 위치 *" v={f.location} c={v=>sf(p=>({...p,location:v}))}/>
       <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
       <div className="grid grid-cols-2 gap-4"><Sel l="우선순위" v={f.priority} c={v=>sf(p=>({...p,priority:v as Priority}))} opts={['긴급','높음','보통','낮음'].map(s=>({v:s,l:s}))}/><Inp l="보고자" v={f.reporter} c={()=>{}} disabled/></div>
-      <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={()=>{}} disabled/><DevSel l="개발담당" v={f.developer_id} c={v=>sf(p=>({...p,developer_id:v}))} devs={devTeam}/></div>
+      <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={()=>{}} disabled/><DevSel l="개발담당" v={f.developer_ids} c={v=>sf(p=>({...p,developer_ids:v}))} devs={devTeam}/></div>
       <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
       {editId && <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>}
       <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
@@ -92,26 +127,37 @@ function BugModal({supabase,devTeam,editId,table,title,versionList,defaultVer,us
     <div className="flex justify-between px-6 py-4 border-t bg-gray-50">{editId?<button onClick={()=>onDel(editId)} className="text-red-500 text-sm font-medium">삭제</button>:<div/>}<div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 rounded-lg">취소</button><button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>
   </div></div>);
 }
-function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean;disabled?:boolean}){const cls="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500";return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls} disabled={disabled}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls} disabled={disabled}/>}</div>);}
-function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
-function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>void;versions:string[];defaultVer?:string}){
-  const mainVer = defaultVer || versions[0] || '';
-  const otherVers = versions.filter(ver=>ver!==mainVer);
-  return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-    <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-      {mainVer && <option value={mainVer}>{mainVer} (현재)</option>}
-      {v && v!==mainVer && !versions.includes(v) && <option value={v}>{v}</option>}
-      {otherVers.length>0 && <option disabled>── 다른 버전 ──</option>}
-      {otherVers.map(ver=><option key={ver} value={ver}>{ver}</option>)}
-    </select></div>);}
+
+function Inp({l,v,c,ph,multi,disabled}:{l:string;v:string;c:(v:string)=>void;ph?:string;multi?:boolean;disabled?:boolean}){const cls="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500";return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>{multi?<textarea value={v} onChange={e=>c(e.target.value)} placeholder={ph} rows={3} className={cls} disabled={disabled}/>:<input type="text" value={v} onChange={e=>c(e.target.value)} placeholder={ph} className={cls} disabled={disabled}/>}</div>);}
+function Sel({l,v,c,opts}:{l:string;v:string;c:(v:string)=>void;opts:{v:string;l:string}[]}){return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm">{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select></div>);}
+function VerSel({l,v,c,versions,defaultVer}:{l:string;v:string;c:(v:string)=>void;versions:string[];defaultVer?:string}){const mainVer=defaultVer||versions[0]||'';const otherVers=versions.filter(ver=>ver!==mainVer);return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label><select value={v} onChange={e=>c(e.target.value)} className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">{mainVer&&<option value={mainVer}>{mainVer} (현재)</option>}{v&&v!==mainVer&&!versions.includes(v)&&<option value={v}>{v}</option>}{otherVers.length>0&&<option disabled>── 다른 버전 ──</option>}{otherVers.map(ver=><option key={ver} value={ver}>{ver}</option>)}</select></div>);}
+
+/* ============ DevSel - 멀티셀렉트 (팀 전체선택 지원) ============ */
 function DevSel({l,v,c,devs}:{l:string;v:string;c:(v:string)=>void;devs:any[]}){
+  const [open,setOpen]=useState(false);
+  const ref=useRef<HTMLDivElement>(null);
+  const selectedIds = v ? v.split(',').filter(Boolean) : [];
+  const toggle = (id:string) => { const next = selectedIds.includes(id) ? selectedIds.filter(x=>x!==id) : [...selectedIds,id]; c(next.join(',')); };
+  const toggleGroup = (ids:string[]) => { const allSelected = ids.every(id=>selectedIds.includes(id)); const next = allSelected ? selectedIds.filter(x=>!ids.includes(x)) : Array.from(new Set([...selectedIds,...ids])); c(next.join(',')); setOpen(false); };
   const groups:{label:string;items:any[]}[]=[
-    {label:'AOS',items:devs.filter(d=>d.department==='개발팀'&&d.platform==='AOS')},
-    {label:'iOS',items:devs.filter(d=>d.department==='개발팀'&&d.platform==='iOS')},
-    {label:'서버',items:devs.filter(d=>d.department==='서버(백앤드)')},
+    {label:'AOS팀',items:devs.filter(d=>d.department==='개발팀'&&d.platform==='AOS')},
+    {label:'iOS팀',items:devs.filter(d=>d.department==='개발팀'&&d.platform==='iOS')},
+    {label:'서버팀',items:devs.filter(d=>d.department==='서버(백앤드)'||d.department==='서버(시스템)')},
+    {label:'QA팀',items:devs.filter(d=>d.platform==='QA')},
   ].filter(g=>g.items.length>0);
-  return(<div><label className="block text-xs font-medium text-gray-600 mb-1">{l}</label>
-    <select value={v} onChange={e=>c(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-      <option value="">미배정</option>
-      {groups.map(g=>(<optgroup key={g.label} label={`── ${g.label} ──`}>{g.items.map(d=><option key={d.id} value={d.id}>{d.name} ({d.role})</option>)}</optgroup>))}
-    </select></div>);}
+  const names = selectedIds.map(id=>devs.find(d=>d.id===id)?.name).filter(Boolean);
+  useEffect(()=>{const handler=(e:MouseEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false);};document.addEventListener('mousedown',handler);return()=>document.removeEventListener('mousedown',handler);},[]);
+  return(
+    <div ref={ref} className="relative"><label className="block text-xs font-medium text-gray-600 dark:text-neutral-400 mb-1">{l}</label>
+      <button type="button" onClick={()=>setOpen(!open)} className="w-full border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-lg px-3 py-2 text-sm text-left font-medium focus:border-black dark:focus:border-white focus:outline-none flex items-center justify-between">
+        <span className={names.length?'text-black dark:text-white':'text-neutral-400'}>{names.length ? names.join(', ') : '미배정'}</span>
+        <ChevronDown size={14} className={`transition ${open?'rotate-180':''}`}/>
+      </button>
+      {open && (<div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] max-h-64 overflow-y-auto">
+        <button type="button" onClick={()=>{c('');setOpen(false);}} className={`w-full text-left px-3 py-2 text-sm font-medium border-b border-neutral-200 dark:border-neutral-700 ${selectedIds.length===0?'bg-black text-white dark:bg-white dark:text-black':'hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}>미배정</button>
+        {groups.map(g=>{const gIds=g.items.map(d=>d.id);const allSel=gIds.every(id=>selectedIds.includes(id));return(<div key={g.label}>
+          <button type="button" onClick={()=>toggleGroup(gIds)} className={`w-full text-left px-3 py-2 text-xs font-black uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between ${allSel?'bg-neutral-900 text-white dark:bg-white dark:text-black':'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}><span>{g.label} 전체</span><span className="text-[10px] font-bold">{allSel?'✓ 선택됨':`${g.items.length}명`}</span></button>
+          {g.items.map(d=>(<button type="button" key={d.id} onClick={()=>toggle(d.id)} className={`w-full text-left px-3 pl-6 py-2 text-sm font-medium border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2 ${selectedIds.includes(d.id)?'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white':'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 text-neutral-700 dark:text-neutral-300'}`}><span className={`w-4 h-4 rounded border-2 flex items-center justify-center text-[10px] ${selectedIds.includes(d.id)?'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black':'border-neutral-300 dark:border-neutral-600'}`}>{selectedIds.includes(d.id)?'✓':''}</span>{d.name} <span className="text-neutral-400 text-xs">({d.role})</span></button>))}
+        </div>);})}
+      </div>)}
+    </div>);}
