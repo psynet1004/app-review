@@ -6,18 +6,22 @@ import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
 import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useVersion } from '@/components/layout/Header';
 import type { FixStatus, Priority, ReviewStatus } from '@/lib/types/database';
+import { CommentChat, CommentBadge } from '@/components/common/CommentChat';
 
 const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
 const EXCLUDED_DEPTS = ['서버(시스템)','재무','데이터/광고','AIAE','운영'];
 
 export default function AppBugsPage() {
   const supabase = createClient();
-  const { aosVersion, iosVersion, aosVersions, iosVersions, userName, userDept } = useVersion();
+  const { aosVersion, iosVersion, aosVersions, iosVersions, userName, userDept, userEmail } = useVersion();
   const [rawBugs, setRawBugs] = useState<any[]>([]);
   const [developers, setDevelopers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState<{platform:'AOS'|'iOS';id?:string}|null>(null);
   const [collapsed, setCollapsed] = useState<Record<string,boolean>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string,number>>({});
+  const [commentNew, setCommentNew] = useState<Record<string,boolean>>({});
+  const [showComment, setShowComment] = useState<{id:string;type:string;title:string}|null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -26,6 +30,22 @@ export default function AppBugsPage() {
       supabase.from('developers').select('*').eq('is_active',true),
     ]);
     setRawBugs(b.data||[]); setDevelopers(d.data||[]); setLoading(false);
+    // Load comment counts
+    const allIds = (b.data||[]).map((i:any)=>i.id);
+    if(allIds.length>0){
+      const {data:counts}=await supabase.from('comments').select('item_id').in('item_id',allIds);
+      const cMap:Record<string,number>={};
+      (counts||[]).forEach((c:any)=>{cMap[c.item_id]=(cMap[c.item_id]||0)+1;});
+      setCommentCounts(cMap);
+      if(userEmail){
+        const {data:reads}=await supabase.from('comment_reads').select('item_id,last_read_at').eq('user_email',userEmail).in('item_id',allIds);
+        const readMap:Record<string,string>={};(reads||[]).forEach((r:any)=>{readMap[r.item_id]=r.last_read_at;});
+        const {data:latest}=await supabase.from('comments').select('item_id,created_at').in('item_id',allIds).order('created_at',{ascending:false});
+        const latestMap:Record<string,string>={};(latest||[]).forEach((l:any)=>{if(!latestMap[l.item_id])latestMap[l.item_id]=l.created_at;});
+        const nMap:Record<string,boolean>={};allIds.forEach((id:string)=>{if(latestMap[id]&&(!readMap[id]||new Date(latestMap[id])>new Date(readMap[id])))nMap[id]=true;});
+        setCommentNew(nMap);
+      }
+    }
   },[]);
 
   useEffect(()=>{loadData();},[loadData]);
@@ -85,6 +105,7 @@ export default function AppBugsPage() {
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
+    {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="bug_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'bug_items',title:i.location})}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
   const handleDel=async(id:string)=>{if(!confirm('삭제?'))return;await supabase.from('bug_items').delete().eq('id',id);afterSave();};
@@ -141,6 +162,7 @@ export default function AppBugsPage() {
       {showForm && <BugModal supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={showForm.platform}
         defaultVersion={getDefaultVer(showForm.platform)} versionList={getVersionList(showForm.platform)}
         userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>}
+      {showComment&&<CommentChat itemId={showComment.id} itemType={showComment.type as any} itemTitle={showComment.title} onClose={()=>setShowComment(null)} onCommentAdded={loadData}/>}
     </div>
   );
 }

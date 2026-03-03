@@ -121,7 +121,7 @@ export function CommentChat({ itemId, itemType, itemTitle, onClose, onCommentAdd
               onChange={e => setMessage(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
               placeholder="코멘트 입력..."
-              className="flex-1 text-sm border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 rounded-md px-3 py-2 focus:border-black dark:focus:border-white focus:outline-none"
+              className="flex-1 text-sm border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-black dark:text-white rounded-md px-3 py-2 focus:border-black dark:focus:border-white focus:outline-none placeholder-neutral-400"
             />
             <button
               onClick={handleSend}
