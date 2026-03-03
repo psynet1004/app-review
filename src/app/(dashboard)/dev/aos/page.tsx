@@ -295,7 +295,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
         <input type="text" value={f.planning_link_url} onChange={e=>sf(p=>({...p,planning_link_url:e.target.value}))} placeholder="URL 입력" className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
       </div>
     </div>
-    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="rounded"/>필수 항목</label>
+    <label className="flex items-center gap-2.5 text-sm font-bold cursor-pointer select-none"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="w-5 h-5 rounded border-2 border-red-400 text-red-600 focus:ring-red-500 accent-red-600"/><span className={`px-2 py-0.5 rounded-md ${f.is_required ? "bg-red-600 text-white" : "text-neutral-400 dark:text-neutral-300"}`}>{f.is_required ? "⚡ 필수 항목" : "필수 항목"}</span></label>
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
