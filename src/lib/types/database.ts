@@ -1,6 +1,6 @@
 export type Platform = 'AOS' | 'iOS' | 'SERVER' | 'QA';
 export type DevStatus = '대기' | '개발중' | '개발완료' | '배포완료' | '보류';
-export type FixStatus = '미수정' | '수정중' | '수정완료' | '보류';
+export type FixStatus = '미수정' | '수정중' | '수정완료' | '배포완료' | '보류';
 export type ReviewStatus = '검수전' | '검수중' | '검수완료';
 export type Priority = '긴급' | '높음' | '보통' | '낮음';
 export type SendStatus = '미전송' | '전송완료' | '재전송';

@@ -82,7 +82,7 @@ export default function ServerBugsPage() {
       <option value="검수전">검수전</option><option value="검수중">검수중</option><option value="검수완료">검수완료</option>
     </select>
   );
-  const isReviewed = (item:any) => item.fix_status==='수정완료' && item.review_status==='검수완료';
+  const isReviewed = (item:any) => (item.fix_status==='수정완료'||item.fix_status==='배포완료') && item.review_status==='검수완료';
 
   const cols = [
     {key:'version',label:'버전',width:'w-20',sortable:true},
@@ -147,7 +147,7 @@ function BugModal({supabase,devTeam,editId,table,title,aosVersions,iosVersions,a
       <Inp l="상세설명" v={f.description} c={v=>sf(p=>({...p,description:v}))} multi/>
       <div className="grid grid-cols-2 gap-4"><Sel l="우선순위" v={f.priority} c={v=>sf(p=>({...p,priority:v as Priority}))} opts={['긴급','높음','보통','낮음'].map(s=>({v:s,l:s}))}/><Inp l="보고자" v={f.reporter} c={()=>{}} disabled/></div>
       <div className="grid grid-cols-2 gap-4"><Inp l="부서" v={f.department} c={()=>{}} disabled/><DevSel l="개발담당" v={f.developer_ids} c={v=>sf(p=>({...p,developer_ids:v}))} devs={devTeam}/></div>
-      <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
+      <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','배포완료','보류'].map(s=>({v:s,l:s}))}/>
       {editId && <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>}
       <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
     </div>

@@ -14,6 +14,7 @@ const fixStatusColors: Record<FixStatus, string> = {
   '수정중': 'bg-white text-black border-black dark:bg-neutral-800 dark:text-white dark:border-neutral-500',
   '수정완료': 'bg-red-600 text-white border-red-700 dark:bg-red-600 dark:text-white dark:border-red-500',
   '보류': 'bg-neutral-100 text-neutral-400 border-neutral-300 dark:bg-neutral-800 dark:text-neutral-600 dark:border-neutral-700 line-through',
+  '배포완료': 'bg-purple-50 text-purple-600 border-purple-500 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-500',
 };
 const sendStatusColors: Record<SendStatus, string> = {
   '미전송': 'bg-neutral-100 text-neutral-400 border-neutral-300 dark:bg-neutral-800 dark:text-neutral-500 dark:border-neutral-600',

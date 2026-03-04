@@ -130,7 +130,7 @@ export default function AosPage() {
   );
 
   // 검수완료 시 취소선
-  const isReviewed = (item:any) => item.fix_status==='수정완료' && item.review_status==='검수완료';
+  const isReviewed = (item:any) => (item.fix_status==='수정완료'||item.fix_status==='배포완료') && item.review_status==='검수완료';
 
   // 개발항목 검수상태 인라인 변경
   const handleDevReviewChange = async(id:string, val:ReviewStatus) => {
@@ -354,7 +354,7 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
       <Inp l="부서" v={f.department} c={()=>{}} disabled/>
       <DevSel l="개발담당" v={f.developer_ids} c={v=>sf(p=>({...p,developer_ids:v}))} devs={devTeam}/>
     </div>
-    <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','보류'].map(s=>({v:s,l:s}))}/>
+    <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','배포완료','보류'].map(s=>({v:s,l:s}))}/>
     {editId && <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>}
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
