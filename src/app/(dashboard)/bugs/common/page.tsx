@@ -123,7 +123,7 @@ export default function CommonBugsPage() {
         </div>
         <button onClick={e=>{e.stopPropagation();setShowForm({});}} className="text-xs bg-white text-black font-bold px-3 py-1 rounded-md border-2 border-white hover:shadow-[2px_2px_0_0_rgba(255,255,255,0.5)] transition-all">+ 추가</button>
       </div>
-      {!collapsed && <DataTable data={items} rowClassName={(i:any)=>isReviewed(i)?"opacity-40 bg-neutral-100 dark:bg-neutral-900":""} columns={cols} selectable selectedIds={selected} onSelectionChange={setSelected}
+      {!collapsed && <DataTable data={items} rowClassName={(i:any)=>isReviewed(i)?"bg-neutral-200/70 dark:bg-neutral-800/70":""} columns={cols} selectable selectedIds={selected} onSelectionChange={setSelected}
         searchKeys={['location','description','reporter']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'} noBorder
         toolbar={<SendBar/>}/>}
     </div>
