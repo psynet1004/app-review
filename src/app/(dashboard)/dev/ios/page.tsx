@@ -293,7 +293,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
   const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_ids:'',dev_status:'대기' as DevStatus,review_status:'검수전' as ReviewStatus,planning_link_url:'',planning_link_name:'',note:''});
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
-  useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_ids:data.developer_ids||data.developer_id||'',dev_status:data.dev_status||'대기',review_status:data.review_status||'검수전',planning_link_url:data.planning_link_url||'',planning_link_name:data.planning_link_name||'',note:data.note||''});});},[editId]);
+  useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_ids:data.developer_ids||data.developer_id||'',dev_status:data.dev_status||'대기',review_status:data.review_status||'검수전',planning_link_url:data.planning_link_url||'',planning_link_name:data.planning_link_name||'',planning_link_name:data.planning_link_name||'',planning_link_url:data.planning_link_url||'',note:data.note||''});});},[editId]);
   const save=async()=>{if(!f.menu_item.trim()){alert('항목명 필수');return;}ss(true);const p:any={...f,platform,developer_ids:f.developer_ids||null,developer_id:null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else{delete p.review_status;await supabase.from('dev_items').insert(p);}ss(false);onSaved();};
   return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
@@ -315,16 +315,17 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
       </div>
     </div>
     <label className="flex items-center gap-2.5 text-sm font-bold cursor-pointer select-none"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="w-5 h-5 rounded border-2 border-red-400 text-red-600 focus:ring-red-500 accent-red-600"/><span className={`px-2 py-0.5 rounded-md ${f.is_required ? "bg-red-600 text-white" : "text-neutral-400 dark:text-neutral-300"}`}>{f.is_required ? "⚡ 필수 항목" : "필수 항목"}</span></label>
+    <div><label className="block text-xs font-medium text-gray-600 dark:text-neutral-400 mb-1">📎 참고 링크</label><div className="grid grid-cols-2 gap-2"><input type="text" value={f.planning_link_name} onChange={e=>sf(p=>({...p,planning_link_name:e.target.value}))} placeholder="링크 이름 (예: 기획서)" className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm"/><input type="text" value={f.planning_link_url} onChange={e=>sf(p=>({...p,planning_link_url:e.target.value}))} placeholder="URL 입력" className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm"/></div></div>
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
 
 /* ============ BugForm ============ */
 function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
-  const [f,sf]=useState({platform:hasPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_ids:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,note:''});
+  const [f,sf]=useState({platform:hasPlatform||'AOS',version:defaultVersion||'',location:'',description:'',priority:'보통' as Priority,department:userDept||'',reporter:userName||'',developer_ids:'',fix_status:'미수정' as FixStatus,review_status:'검수전' as ReviewStatus,planning_link_name:'',planning_link_url:'',note:''});
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId){sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
-  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||hasPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_ids:data.developer_ids||data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',note:data.note||''});});},[editId]);
+  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||hasPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_ids:data.developer_ids||data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',planning_link_name:data.planning_link_name||'',planning_link_url:data.planning_link_url||'',note:data.note||''});});},[editId]);
   const save=async()=>{
     if(!f.location.trim()){alert('위치 필수');return;}
     ss(true);
@@ -356,6 +357,7 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
     </div>
     <Sel l="수정결과" v={f.fix_status} c={v=>sf(p=>({...p,fix_status:v as FixStatus}))} opts={['미수정','수정중','수정완료','배포완료','보류'].map(s=>({v:s,l:s}))}/>
     {editId && <Sel l="검수상태" v={f.review_status} c={v=>sf(p=>({...p,review_status:v as ReviewStatus}))} opts={['검수전','검수중','검수완료'].map(s=>({v:s,l:s}))}/>}
+    <div><label className="block text-xs font-medium text-gray-600 dark:text-neutral-400 mb-1">📎 참고 링크</label><div className="grid grid-cols-2 gap-2"><input type="text" value={f.planning_link_name} onChange={e=>sf(p=>({...p,planning_link_name:e.target.value}))} placeholder="링크 이름 (예: 기획서)" className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm"/><input type="text" value={f.planning_link_url} onChange={e=>sf(p=>({...p,planning_link_url:e.target.value}))} placeholder="URL 입력" className="w-full border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm"/></div></div>
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
