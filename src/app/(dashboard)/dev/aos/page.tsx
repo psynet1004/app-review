@@ -86,8 +86,8 @@ export default function AosPage() {
 
   const devItems = useMemo(() => filterVer(rawDev, 'dev_status'), [rawDev, filterVer]);
   const bugItems = useMemo(() => filterVer(rawBug, 'fix_status'), [rawBug, filterVer]);
-  const commonItems = useMemo(() => filterVer(rawCommon, 'fix_status'), [rawCommon, filterVer]);
-  const serverItems = useMemo(() => filterVer(rawServer, 'fix_status'), [rawServer, filterVer]);
+  const commonItems = useMemo(() => rawCommon, [rawCommon]);
+  const serverItems = useMemo(() => rawServer, [rawServer]);
 
   const toggle = (k:string) => setCollapsed(p=>({...p,[k]:!p[k]}));
   const closeForm=()=>setShowForm(null);
@@ -251,6 +251,7 @@ export default function AosPage() {
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="📋 개발항목" count={devItems.length} color="cel-dev" sectionKey="dev" onAdd={()=>setShowForm({type:'dev'})}/>
       {!collapsed.dev && <DataTable data={devItems} columns={devCols} selectable selectedIds={selDev} onSelectionChange={setSelDev}
+        rowClassName={(i:any)=>isDevReviewed(i)?'opacity-40 bg-neutral-100 dark:bg-neutral-900':''}
         searchKeys={['menu_item','description','department']} searchPlaceholder="개발항목 검색..." emptyMessage={loading?'로딩 중...':'등록된 항목 없음'}
         toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)} onDelete={()=>handleBulkDel('dev',selDev)}/>}/>}
     </div>
@@ -258,6 +259,7 @@ export default function AosPage() {
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="🐛 앱 오류" count={bugItems.length} color="cel-bug" sectionKey="bug" onAdd={()=>setShowForm({type:'bug'})}/>
       {!collapsed.bug && <DataTable data={bugItems} columns={bugCols} selectable selectedIds={selBug} onSelectionChange={setSelBug}
+        rowClassName={(i:any)=>isReviewed(i)?'opacity-40 bg-neutral-100 dark:bg-neutral-900':''}
         searchKeys={['location','description','reporter']} searchPlaceholder="앱 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)} onDelete={()=>handleBulkDel('bug',selBug)}/>}/>}
     </div>
@@ -265,6 +267,7 @@ export default function AosPage() {
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="cel-common" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
       {!collapsed.common && <DataTable data={commonItems} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
+        rowClassName={(i:any)=>isReviewed(i)?'opacity-40 bg-neutral-100 dark:bg-neutral-900':''}
         searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)} onDelete={()=>handleBulkDel('common',selCommon)}/>}/>}
     </div>
@@ -272,6 +275,7 @@ export default function AosPage() {
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="cel-server" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
       {!collapsed.server && <DataTable data={serverItems} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
+        rowClassName={(i:any)=>isReviewed(i)?'opacity-40 bg-neutral-100 dark:bg-neutral-900':''}
         searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
         toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)}/>}/>}
     </div>

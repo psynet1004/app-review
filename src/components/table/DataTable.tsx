@@ -25,12 +25,13 @@ interface DataTableProps<T> {
   toolbar?: React.ReactNode;
   emptyMessage?: string;
   noBorder?: boolean;
+  rowClassName?: (item: T) => string;
 }
 
 export default function DataTable<T extends Record<string, any>>({
   data, columns, selectable = false, selectedIds, onSelectionChange,
   idKey = 'id', searchPlaceholder = '검색...', searchKeys = [], toolbar,
-  emptyMessage = '데이터가 없습니다', noBorder = false,
+  emptyMessage = '데이터가 없습니다', noBorder = false, rowClassName,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -93,7 +94,7 @@ export default function DataTable<T extends Record<string, any>>({
             {filtered.length === 0 ? (
               <tr><td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-12 text-center text-neutral-400 font-medium">{emptyMessage}</td></tr>
             ) : filtered.map(item => (
-              <tr key={item[idKey]} className={cn("hover:bg-stone-50 dark:hover:bg-neutral-800/50 transition-colors", selectedIds?.has(item[idKey]) && "bg-yellow-50 dark:bg-yellow-900/10")}>
+              <tr key={item[idKey]} className={cn("hover:bg-stone-50 dark:hover:bg-neutral-800/50 transition-colors", selectedIds?.has(item[idKey]) && "bg-yellow-50 dark:bg-yellow-900/10", rowClassName && rowClassName(item))}>
                 {selectable && <td className="w-10 px-3 py-2.5 align-middle text-center"><input type="checkbox" checked={selectedIds?.has(item[idKey]) ?? false} onChange={() => toggleOne(item[idKey])} className="rounded border-2 border-black accent-black" /></td>}
                 {columns.map(col => (
                   <td key={col.key} className={cn("px-4 py-2.5 text-neutral-800 dark:text-neutral-200 align-middle font-medium", alignCls(col.align), col.width)}>

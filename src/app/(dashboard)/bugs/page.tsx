@@ -159,13 +159,13 @@ export default function AppBugsPage() {
       </div>
       <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] bg-white dark:bg-neutral-950 overflow-hidden">
         <SectionHeader title="📱 AOS 앱 오류" count={aosBugs.length} sectionKey="aos" onAdd={()=>setShowForm({platform:'AOS'})}/>
-        {!collapsed.aos && <DataTable data={aosBugs} columns={makeCols('AOS')} selectable selectedIds={selAos} onSelectionChange={setSelAos}
+        {!collapsed.aos && <DataTable data={aosBugs} rowClassName={(i:any)=>isReviewed(i)?"opacity-40 bg-neutral-100 dark:bg-neutral-900":""} columns={makeCols('AOS')} selectable selectedIds={selAos} onSelectionChange={setSelAos}
           searchKeys={['location','description']} searchPlaceholder="AOS 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'} noBorder
           toolbar={<SendBar ids={selAos} onSend={()=>handleSend('AOS',selAos)} onDelete={()=>handleBulkDel('AOS',selAos)}/>}/>}
       </div>
       <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] bg-white dark:bg-neutral-950 overflow-hidden">
         <SectionHeader title="🍎 iOS 앱 오류" count={iosBugs.length} sectionKey="ios" onAdd={()=>setShowForm({platform:'iOS'})}/>
-        {!collapsed.ios && <DataTable data={iosBugs} columns={makeCols('iOS')} selectable selectedIds={selIos} onSelectionChange={setSelIos}
+        {!collapsed.ios && <DataTable data={iosBugs} rowClassName={(i:any)=>isReviewed(i)?"opacity-40 bg-neutral-100 dark:bg-neutral-900":""} columns={makeCols('iOS')} selectable selectedIds={selIos} onSelectionChange={setSelIos}
           searchKeys={['location','description']} searchPlaceholder="iOS 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'} noBorder
           toolbar={<SendBar ids={selIos} onSend={()=>handleSend('iOS',selIos)} onDelete={()=>handleBulkDel('iOS',selIos)}/>}/>}
       </div>
