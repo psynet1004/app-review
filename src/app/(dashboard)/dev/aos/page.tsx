@@ -76,7 +76,7 @@ export default function AosPage() {
     const curIdx = verList.indexOf(selectedVer);
     const olderVers = curIdx >= 0 ? verList.slice(curIdx + 1) : [];
     const incomplete = statusField === 'dev_status'
-      ? ['대기','개발중','보류','배포완료']
+      ? ['대기','개발중','보류']
       : ['미수정','수정중','보류'];
     const carried = items
       .filter(i => olderVers.includes(i.version) && incomplete.includes(i[statusField]))
@@ -147,7 +147,7 @@ export default function AosPage() {
     </select>
   );
 
-  const isDevReviewed = (item:any) => item.dev_status==='개발완료' && item.review_status==='검수완료';
+  const isDevReviewed = (item:any) => item.dev_status==='배포완료' && item.review_status==='검수완료';
 
   const devCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
