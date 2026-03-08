@@ -62,8 +62,10 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
         {allDone ? "✓ 완료" : hasAny ? `${doneCount}/${QA_CATEGORIES.length}` : "검수결과"}
       </button>
       {open && (
+        <>
+        <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setOpen(false)}/>
         <div
-          className="absolute z-50 right-0 top-full mt-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] p-4 w-fit"
+          className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] p-4 w-fit"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-2"><span className="text-xs font-black text-neutral-600 dark:text-neutral-400">검수결과</span><button onClick={() => setOpen(false)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 text-sm font-bold">✕</button></div>
@@ -92,6 +94,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
             ))}
           </div>
         </div>
+        </>
       )}
     </div>
   );
