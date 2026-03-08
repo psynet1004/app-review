@@ -63,17 +63,17 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
       </button>
       {open && (
         <div
-          className="absolute z-50 right-0 top-full mt-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] p-3 min-w-[280px]"
+          className="absolute z-50 right-0 top-full mt-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] p-3 min-w-[700px]"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="text-xs font-black mb-2 text-neutral-600 dark:text-neutral-400">검수결과</div>
-          <div className="space-y-1.5">
+          <div className="flex gap-3">
             {QA_CATEGORIES.map((cat) => (
-              <div key={cat} className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 w-16 shrink-0">
+              <div key={cat} className="flex flex-col items-center gap-1">
+                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
                   {cat}
                 </span>
-                <div className="flex gap-1 flex-wrap">
+                <div className="flex flex-col gap-0.5">
                   {QA_OPTIONS.map((opt) => (
                     <button
                       key={opt.v}
