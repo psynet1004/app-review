@@ -63,10 +63,10 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
       </button>
       {open && (
         <div
-          className="absolute z-50 right-0 top-full mt-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] p-3 min-w-[700px]"
+          className="absolute z-50 right-0 top-full mt-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] p-4 w-fit"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="text-xs font-black mb-2 text-neutral-600 dark:text-neutral-400">검수결과</div>
+          <div className="flex items-center justify-between mb-2"><span className="text-xs font-black text-neutral-600 dark:text-neutral-400">검수결과</span><button onClick={() => setOpen(false)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 text-sm font-bold">✕</button></div>
           <div className="flex gap-3">
             {QA_CATEGORIES.map((cat) => (
               <div key={cat} className="flex flex-col items-center gap-1">
@@ -78,7 +78,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
                     <button
                       key={opt.v}
                       onClick={() => handleChange(cat, opt.v)}
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded border transition-all ${
+                      className={`text-[10px] font-bold px-2 py-1 rounded border transition-all w-full text-center ${
                         qa[cat] === opt.v || (!qa[cat] && opt.v === "")
                           ? `${opt.color} border-transparent ring-2 ring-black dark:ring-white ring-offset-1`
                           : "bg-neutral-50 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700"
