@@ -7,6 +7,7 @@ import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp } from 'lucide-re
 import { useVersion } from '@/components/layout/Header';
 import type { FixStatus, Priority, ReviewStatus } from '@/lib/types/database';
 import { CommentChat, CommentBadge } from '@/components/common/CommentChat';
+import { QAResultBadge, isQAComplete } from '@/components/common/QAResult';
 
 const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
 const EXCLUDED_DEPTS = ['서버(시스템)','재무','데이터/광고','AIAE','운영'];
@@ -95,7 +96,7 @@ export default function AppBugsPage() {
       <option value="검수전">검수전</option><option value="검수중">검수중</option><option value="검수완료">검수완료</option>
     </select>
   );
-  const isReviewed = (item:any) => (item.fix_status==='수정완료'||item.fix_status==='배포완료') && item.review_status==='검수완료';
+  const isReviewed = (item:any) => (item.fix_status==='수정완료'||item.fix_status==='배포완료') && item.review_status==='검수완료' && isQAComplete(item);
 
   const makeCols=(platform:'AOS'|'iOS')=>[
     {key:'version',label:'버전',width:'w-28',sortable:true,render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
@@ -107,6 +108,7 @@ export default function AppBugsPage() {
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
+    {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="bug_items" onUpdated={loadData}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="bug_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'bug_items',title:i.location})}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];

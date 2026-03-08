@@ -7,6 +7,7 @@ import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp, MessageCircle } 
 import { useVersion } from '@/components/layout/Header';
 import type { DevStatus, FixStatus, Priority, ReviewStatus } from '@/lib/types/database';
 import { CommentChat, CommentBadge } from '@/components/common/CommentChat';
+import { QAResultBadge, isQAComplete } from '@/components/common/QAResult';
 
 const PLATFORM = 'AOS';
 const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
@@ -130,7 +131,7 @@ export default function AosPage() {
   );
 
   // 검수완료 시 취소선
-  const isReviewed = (item:any) => (item.fix_status==='수정완료'||item.fix_status==='배포완료') && item.review_status==='검수완료';
+  const isReviewed = (item:any) => (item.fix_status==='수정완료'||item.fix_status==='배포완료') && item.review_status==='검수완료' && isQAComplete(item);
 
   // 개발항목 검수상태 인라인 변경
   const handleDevReviewChange = async(id:string, val:ReviewStatus) => {
@@ -147,7 +148,7 @@ export default function AosPage() {
     </select>
   );
 
-  const isDevReviewed = (item:any) => item.dev_status==='배포완료' && item.review_status==='검수완료';
+  const isDevReviewed = (item:any) => item.dev_status==='배포완료' && item.review_status==='검수완료' && isQAComplete(item);
 
   const devCols = [
     {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
@@ -161,6 +162,7 @@ export default function AosPage() {
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><DevReviewSel item={i}/>},
+    {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="dev_items" onUpdated={loadData}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="dev_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'dev_items',title:i.menu_item})}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
@@ -175,6 +177,7 @@ export default function AosPage() {
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
+    {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="bug_items" onUpdated={loadData}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="bug_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'bug_items',title:i.location})}/>},
     {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
   ];
@@ -182,12 +185,14 @@ export default function AosPage() {
   const commonCols = bugCols.map(c=>{
     if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'common',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>};
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="common_bugs"/>};
+    if(c.key==='qa_results') return {...c,render:(i:any)=><QAResultBadge item={i} table="common_bugs" onUpdated={loadData}/>};
     if(c.key==='comments') return {...c,render:(i:any)=><CommentBadge itemId={i.id} itemType="common_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'common_bugs',title:i.location})}/>};
     return c;
   });
   const serverCols = bugCols.map(c=>{
     if(c.key==='location') return {...c,render:(i:any)=><button onClick={()=>setShowForm({type:'server',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>};
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="server_bugs"/>};
+    if(c.key==='qa_results') return {...c,render:(i:any)=><QAResultBadge item={i} table="server_bugs" onUpdated={loadData}/>};
     if(c.key==='comments') return {...c,render:(i:any)=><CommentBadge itemId={i.id} itemType="server_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'server_bugs',title:i.location})}/>};
     return c;
   });
