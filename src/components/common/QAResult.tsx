@@ -69,7 +69,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
           <div className="flex items-center justify-between mb-2"><span className="text-xs font-black text-neutral-600 dark:text-neutral-400">검수결과</span><button onClick={() => setOpen(false)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 text-sm font-bold">✕</button></div>
           <div className="flex gap-3">
             {QA_CATEGORIES.map((cat) => (
-              <div key={cat} className="flex flex-col items-center gap-1">
+              <div key={cat} className="flex flex-col items-center gap-1 min-w-[64px]">
                 <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
                   {cat}
                 </span>
@@ -78,7 +78,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
                     <button
                       key={opt.v}
                       onClick={() => handleChange(cat, opt.v)}
-                      className={`text-[10px] font-bold px-2 py-1 rounded border transition-all w-full text-center ${
+                      className={`text-[10px] font-bold px-2 py-1 rounded border transition-all w-full text-center whitespace-nowrap ${
                         qa[cat] === opt.v || (!qa[cat] && opt.v === "")
                           ? `${opt.color} border-transparent ring-2 ring-black dark:ring-white ring-offset-1`
                           : "bg-neutral-50 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700"
