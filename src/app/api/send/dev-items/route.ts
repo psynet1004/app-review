@@ -1,5 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server';
-import { sendToWebhook, formatDevItemMessage } from '@/lib/chat/webhook';
+import { sendToWebhook, groupByDeveloper, formatDevItemMessageByDev } from '@/lib/chat/webhook';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -35,13 +35,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `${platform} Webhook이 설정되지 않았습니다` }, { status: 404 });
     }
 
-    // 3. 메시지 생성 및 전송
+    // 3. 개발담당별로 그룹핑하여 각각 전송
     const version = items[0]?.version || '';
-    const message = formatDevItemMessage(items, platform, version);
-    const success = await sendToWebhook(webhook.webhook_url, message);
+    const groups = groupByDeveloper(items);
+    let allSuccess = true;
+
+    for (const [devName, devItems] of groups) {
+      const message = formatDevItemMessageByDev(devItems, platform, version, devName);
+      const success = await sendToWebhook(webhook.webhook_url, message);
+      if (!success) allSuccess = false;
+    }
 
     // 4. 전송상태 업데이트
-    if (success) {
+    if (allSuccess) {
       await supabase
         .from('dev_items')
         .update({ send_status: '전송완료' })
@@ -49,6 +55,7 @@ export async function POST(request: Request) {
     }
 
     // 5. 로그 기록
+    const devNames = Array.from(groups.keys()).join(', ');
     await supabase.from('send_logs').insert({
       sent_by: user.id,
       sent_by_email: user.email,
@@ -56,12 +63,12 @@ export async function POST(request: Request) {
       target_platform: platform,
       target_space: webhook.space_name,
       item_count: items.length,
-      item_summary: items.map(i => i.menu_item).join(', ').slice(0, 200),
-      result: success ? '성공' : '실패',
-      error_message: success ? null : 'Webhook 전송 실패',
+      item_summary: `[${devNames}] ${items.map(i => i.menu_item).join(', ')}`.slice(0, 200),
+      result: allSuccess ? '성공' : '실패',
+      error_message: allSuccess ? null : 'Webhook 전송 실패',
     });
 
-    return NextResponse.json({ success, count: items.length });
+    return NextResponse.json({ success: allSuccess, count: items.length, groups: groups.size });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

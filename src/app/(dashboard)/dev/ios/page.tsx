@@ -249,7 +249,7 @@ export default function AosPage() {
 
   return (<div className="space-y-6">
     <div>
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white">AOS</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white">iOS</h1>
       {selectedVer && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
     </div>
 
