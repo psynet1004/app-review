@@ -89,7 +89,7 @@ export default function CommonBugsPage() {
     {key:'version',label:'버전',width:'w-20',sortable:true},
     {key:'priority',label:'우선순위',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'위치',sortable:true,render:(i:any)=><button onClick={()=>setShowForm({id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>},
-    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><span className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</span>},
+    {key:'description',label:'설명',width:'max-w-xs',render:(i:any)=><button onClick={()=>setShowForm({id:i.id})} className={`text-neutral-500 dark:text-neutral-400 text-xs line-clamp-1 text-left hover:underline ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</button>},
     {key:'department',label:'부서',width:'w-24',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
     {key:'reporter',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.reporter||'-'}</span>},
     {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
