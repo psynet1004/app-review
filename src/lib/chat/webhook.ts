@@ -9,37 +9,6 @@ export async function sendToWebhook(webhookUrl: string, message: string): Promis
   return response.ok;
 }
 
-export function formatDevItemMessageByDev(items: DevItem[], platform: string, version: string, devName: string): string {
-  const header = `📋 [개발항목 알림] ${platform} ${version}\n👤 개발담당: ${devName} (${items.length}건)\n`;
-  const divider = '━'.repeat(30);
-  const body = items.map(item => [
-    divider,
-    `📌 항목: ${item.menu_item}`,
-    item.description ? `📝 상세: ${item.description}` : '',
-    `🏢 부서: ${item.department || '-'} / 요청자: ${item.requester || '-'}`,
-    `⚡ 필수: ${item.is_required ? '예' : '아니오'}`,
-  ].filter(Boolean).join('\n')).join('\n');
-  const footer = `\n${divider}\n🔗 ${process.env.NEXT_PUBLIC_APP_URL}/dev/${platform.toLowerCase()}`;
-  return header + body + footer;
-}
-
-export function formatBugMessageByDev(items: (BugItem | CommonBug | ServerBug)[], type: string, version: string, devName: string): string {
-  const header = `🐛 [${type} 알림] ${version}\n👤 개발담당: ${devName} (${items.length}건)\n`;
-  const divider = '━'.repeat(30);
-  const body = items.map(item => {
-    const priorityEmoji = { '긴급': '🔴', '높음': '🟠', '보통': '🟡', '낮음': '🟢' };
-    return [
-      divider,
-      `${priorityEmoji[item.priority as keyof typeof priorityEmoji] || '🟡'} 우선순위: ${item.priority}`,
-      `📍 위치: ${item.location}`,
-      item.description ? `📝 상세: ${item.description}` : '',
-      `👤 보고자: ${'reporter' in item ? item.reporter : '-'}`,
-    ].filter(Boolean).join('\n');
-  }).join('\n');
-  const footer = `\n${divider}\n🔗 ${process.env.NEXT_PUBLIC_APP_URL}/bugs`;
-  return header + body + footer;
-}
-
 export function formatDevItemMessage(items: DevItem[], platform: string, version: string): string {
   const header = `📋 [개발항목 알림] ${platform} ${version}\n`;
   const divider = '━'.repeat(30);
