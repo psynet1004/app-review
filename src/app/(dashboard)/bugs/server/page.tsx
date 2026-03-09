@@ -21,6 +21,7 @@ export default function ServerBugsPage() {
   const [showForm, setShowForm] = useState<{id?:string}|null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState(false);
+  const [tab, setTab] = useState<'incomplete'|'complete'>('incomplete');
   const [commentCounts, setCommentCounts] = useState<Record<string,number>>({});
   const [commentNew, setCommentNew] = useState<Record<string,boolean>>({});
   const [showComment, setShowComment] = useState<{id:string;type:string;title:string}|null>(null);
@@ -47,6 +48,16 @@ export default function ServerBugsPage() {
     }
   },[]);
   useEffect(()=>{load();},[load]);
+
+  // Auto-update completed_at when item becomes fully complete
+  const checkAndSetCompleted = async (item: any) => {
+    const isComplete = (item.fix_status==='수정완료'||item.fix_status==='배포완료') && item.review_status==='검수완료' && isQAComplete(item);
+    if (isComplete && !item.completed_at) {
+      await supabase.from('server_bugs').update({ completed_at: new Date().toISOString() }).eq('id', item.id);
+    } else if (!isComplete && item.completed_at) {
+      await supabase.from('server_bugs').update({ completed_at: null }).eq('id', item.id);
+    }
+  };
   const devTeam = useMemo(()=>devs.filter(d=>['개발팀','서버(백앤드)'].includes(d.department)&&!EXCLUDED_ROLES.includes(d.role)&&!EXCLUDED_DEPTS.includes(d.department)),[devs]);
   const allVers = Array.from(new Set(aosVersions.map(v=>v.version).concat(iosVersions.map(v=>v.version))));
   const defaultVer = aosVersion || iosVersion || allVers[0] || '';
@@ -76,6 +87,8 @@ export default function ServerBugsPage() {
   const handleReviewChange = async(id:string, val:ReviewStatus) => {
     await supabase.from('server_bugs').update({review_status:val}).eq('id',id);
     load();
+    // Check completed after reload
+    setTimeout(async()=>{const {data}=await supabase.from('server_bugs').select('*').eq('id',id).single();if(data)checkAndSetCompleted(data);},500);
   };
   const ReviewSel = ({item}:{item:any}) => (
     <select value={item.review_status||'검수전'} onChange={e=>handleReviewChange(item.id,e.target.value as ReviewStatus)}
@@ -97,7 +110,8 @@ export default function ServerBugsPage() {
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
     {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="server_bugs" onUpdated={load}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="server_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'server_bugs',title:i.location})}/>},
-    {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
+    {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>,
+    {key:'completed_at',label:'완료일',width:'w-24',align:'center' as const,render:(i:any)=>i.completed_at?<span className="text-[10px] text-neutral-500 dark:text-neutral-400">{new Date(i.completed_at).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})}</span>:<span className="text-neutral-300 dark:text-neutral-600">-</span>}},
   ];
 
   const SendBar = () => selected.size > 0 ? (
@@ -125,9 +139,18 @@ export default function ServerBugsPage() {
         </div>
         <button onClick={e=>{e.stopPropagation();setShowForm({});}} className="text-xs bg-white text-black font-bold px-3 py-1 rounded-md border-2 border-white hover:shadow-[2px_2px_0_0_rgba(255,255,255,0.5)] transition-all">+ 추가</button>
       </div>
-      {!collapsed && <DataTable data={items} rowClassName={(i:any)=>isReviewed(i)?"bg-neutral-300 dark:bg-black/60 dark:text-neutral-600":""} columns={cols} selectable selectedIds={selected} onSelectionChange={setSelected}
+      {!collapsed && <>
+        <div className="flex border-b-2 border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
+          <button onClick={()=>setTab('incomplete')} className={`px-4 py-2 text-xs font-bold transition-all ${tab==='incomplete'?'text-black dark:text-white border-b-2 border-black dark:border-white -mb-[2px]':'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`}>
+            수정전 ({items.filter(i=>!isReviewed(i)).length})
+          </button>
+          <button onClick={()=>setTab('complete')} className={`px-4 py-2 text-xs font-bold transition-all ${tab==='complete'?'text-black dark:text-white border-b-2 border-black dark:border-white -mb-[2px]':'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`}>
+            수정완료 ({items.filter(i=>isReviewed(i)).length})
+          </button>
+        </div>
+        <DataTable data={tab==='incomplete'?items.filter(i=>!isReviewed(i)):items.filter(i=>isReviewed(i))} rowClassName={(i:any)=>isReviewed(i)?"bg-neutral-200 dark:bg-neutral-800/50":"bg-white dark:bg-neutral-700/40"} columns={cols} selectable selectedIds={selected} onSelectionChange={setSelected}
         searchKeys={['location','description','reporter']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'없음'} noBorder
-        toolbar={<SendBar/>}/>}
+        toolbar={<SendBar/>}/></>}
     </div>
     {showForm&&<BugModal supabase={supabase} devTeam={devTeam} editId={showForm.id} table="server_bugs" title="서버 오류" aosVersions={aosVersions} iosVersions={iosVersions} aosVersion={aosVersion} iosVersion={iosVersion} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={handleDel}/>}
     {showComment&&<CommentChat itemId={showComment.id} itemType={showComment.type as any} itemTitle={showComment.title} onClose={()=>setShowComment(null)} onCommentAdded={load}/>}
