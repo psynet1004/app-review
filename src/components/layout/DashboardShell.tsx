@@ -67,6 +67,13 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             .single();
           if (dev) setUserDept(dev.department);
         }
+        // Log access
+        supabase.from('access_logs').insert({
+          user_email: email,
+          user_name: name,
+          action: 'login',
+          page: window.location.pathname,
+        }).then(() => {});
       }
     });
   }, [loadVersions, supabase]);
