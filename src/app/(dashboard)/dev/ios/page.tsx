@@ -245,14 +245,26 @@ export default function AosPage() {
     </div>
   );
 
-  const SendBar = ({ids,onSend,onDelete}:{ids:Set<string>;onSend:()=>void;onDelete:()=>void}) => ids.size > 0 ? (
-    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-neutral-100 dark:border-neutral-800">
+  const [moveVer, setMoveVer] = useState('');
+  const SendBar = ({ids,onSend,onDelete,onMove}:{ids:Set<string>;onSend:()=>void;onDelete:()=>void;onMove:(ver:string)=>void}) => ids.size > 0 ? (
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
       <button onClick={onSend} className="flex items-center gap-1 bg-black text-white text-xs px-3 py-1.5 rounded-md border-2 border-black font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] dark:bg-white dark:text-black dark:border-white">
         <Send size={12}/>선택 전송 ({ids.size})
       </button>
       <button onClick={onDelete} className="flex items-center gap-1 bg-red-600 text-white text-xs px-3 py-1.5 rounded-md border-2 border-red-700 font-bold hover:bg-red-700">
         🗑 선택 삭제 ({ids.size})
       </button>
+      <div className="flex items-center gap-1 ml-2 border-l-2 border-neutral-300 dark:border-neutral-600 pl-2">
+        <select value={moveVer} onChange={e=>setMoveVer(e.target.value)} onClick={e=>e.stopPropagation()}
+          className="text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2 py-1 font-bold focus:border-black dark:focus:border-white focus:outline-none">
+          <option value="">버전 선택</option>
+          {versionList.map(v=><option key={v} value={v}>{v}</option>)}
+        </select>
+        <button onClick={()=>{if(moveVer)onMove(moveVer);setMoveVer('');}} disabled={!moveVer}
+          className={}>
+          ⇀ 이동 ({ids.size})
+        </button>
+      </div>
     </div>
   ) : null;
 
