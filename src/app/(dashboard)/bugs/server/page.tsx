@@ -110,7 +110,7 @@ export default function ServerBugsPage() {
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
     {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="server_bugs" onUpdated={load}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="server_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'server_bugs',title:i.location})}/>},
-    {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>,
+    {key:'send_status',label:'전송',width:'w-20',align:'center' as const,render:(i:any)=><StatusBadge status={i.send_status} type="send"/>},
     {key:'completed_at',label:'완료일',width:'w-24',align:'center' as const,render:(i:any)=>i.completed_at?<span className="text-[10px] text-neutral-500 dark:text-neutral-400">{new Date(i.completed_at).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})}</span>:<span className="text-neutral-300 dark:text-neutral-600">-</span>}},
   ];
 
