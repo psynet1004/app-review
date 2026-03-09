@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, createContext, useContext, useRef } from 'react';
-import { LogOut, User, ChevronDown, Plus, Trash2, Moon, Sun } from 'lucide-react';
+import { LogOut, User, ChevronDown, Plus, Trash2, Moon, Sun, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { AppVersion } from '@/lib/types/database';
@@ -60,6 +60,20 @@ export default function Header() {
 function VersionDropdown({ label, versions, selected, onSelect, refresh }: { label: string; versions: AppVersion[]; selected: string; onSelect: (v: string) => void; refresh: () => void; }) {
   const [open, setOpen] = useState(false);
   const [newVer, setNewVer] = useState('');
+  const [editingId, setEditingId] = useState<string|null>(null);
+  const [editVer, setEditVer] = useState('');
+  const handleEdit = async (id: string, oldVersion: string) => {
+    if (!editVer.trim() || editVer === oldVersion) { setEditingId(null); return; }
+    await supabase.from('app_versions').update({ version: editVer.trim() }).eq('id', id);
+    // Also update related items
+    const tables = ['dev_items', 'bug_items'];
+    for (const t of tables) {
+      await supabase.from(t).update({ version: editVer.trim() }).eq('version', oldVersion).eq('platform', platform);
+    }
+    setEditingId(null);
+    if (selected === oldVersion) onSelect(editVer.trim());
+    refresh();
+  };
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
   const router = useRouter();
@@ -84,11 +98,20 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: { lab
             {versions.map(v => (
               <div key={v.id} onClick={() => { onSelect(v.version); setOpen(false); router.push(label === 'AOS' ? '/dev/aos' : '/dev/ios'); }} className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer group transition-all border-b border-neutral-100 dark:border-neutral-800 ${v.version === selected ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}>
                 <div className="flex items-center gap-2.5">
-                  <span className={`font-bold ${v.version === selected ? '' : 'text-neutral-700 dark:text-neutral-300'}`}>{v.version}</span>
+                  {editingId === v.id ? (
+                    <input type="text" value={editVer} onChange={e => setEditVer(e.target.value)}
+                      onKeyDown={e => { if(e.key==='Enter') handleEdit(v.id, v.version); if(e.key==='Escape') setEditingId(null); }}
+                      onBlur={() => handleEdit(v.id, v.version)}
+                      autoFocus onClick={e => e.stopPropagation()}
+                      className="font-bold text-sm bg-transparent border-b-2 border-blue-500 outline-none w-24 px-0 py-0" />
+                  ) : (
+                    <span className={`font-bold ${v.version === selected ? '' : 'text-neutral-700 dark:text-neutral-300'}`}>{v.version}</span>
+                  )}
                   {v.is_current && <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border-2 border-red-500 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-black">완료</span>}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                   <button onClick={e => toggleComplete(e, v)} className="text-[10px] px-1.5 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 font-bold">{v.is_current ? '해제' : '완료'}</button>
+                  <button onClick={e => { e.stopPropagation(); setEditingId(v.id); setEditVer(v.version); }} className="text-neutral-400 hover:text-blue-500"><Pencil size={13} strokeWidth={2.5} /></button>
                   <button onClick={e => handleDelete(e, v.id)} className="text-neutral-400 hover:text-red-500"><Trash2 size={13} strokeWidth={2.5} /></button>
                 </div>
               </div>
