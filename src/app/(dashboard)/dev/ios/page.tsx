@@ -103,7 +103,9 @@ export default function AosPage() {
   const [selDev, setSelDev] = useState<Set<string>>(new Set());
   const [selBug, setSelBug] = useState<Set<string>>(new Set());
   const [selCommon, setSelCommon] = useState<Set<string>>(new Set());
+  const [commonTab, setCommonTab] = useState<'incomplete'|'complete'>('incomplete');
   const [selServer, setSelServer] = useState<Set<string>>(new Set());
+  const [serverTab, setServerTab] = useState<'incomplete'|'complete'>('incomplete');
 
   const getDevNames = (item:any) => {
     const raw = item.developer_ids || item.developer_id || "";
@@ -271,18 +273,36 @@ export default function AosPage() {
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="cel-common" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
-      {!collapsed.common && <DataTable data={commonItems} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
+      {!collapsed.common && <>
+        <div className="flex border-b-2 border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
+          <button onClick={()=>setCommonTab('incomplete')} className={`px-4 py-2 text-xs font-bold transition-all ${commonTab==='incomplete'?'text-black dark:text-white border-b-2 border-black dark:border-white -mb-[2px]':'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`}>
+            수정전 ({commonItems.filter(i=>!isReviewed(i)).length})
+          </button>
+          <button onClick={()=>setCommonTab('complete')} className={`px-4 py-2 text-xs font-bold transition-all ${commonTab==='complete'?'text-black dark:text-white border-b-2 border-black dark:border-white -mb-[2px]':'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`}>
+            수정완료 ({commonItems.filter(i=>isReviewed(i)).length})
+          </button>
+        </div>
+        <DataTable data={commonTab==='incomplete'?commonItems.filter(i=>!isReviewed(i)):commonItems.filter(i=>isReviewed(i))} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
         rowClassName={(i:any)=>isReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)} onDelete={()=>handleBulkDel('common',selCommon)}/>}/>}
+        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)} onDelete={()=>handleBulkDel('common',selCommon)}/>}/></>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="🖥️ 서버 오류" count={serverItems.length} color="cel-server" sectionKey="server" onAdd={()=>setShowForm({type:'server'})}/>
-      {!collapsed.server && <DataTable data={serverItems} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
+      {!collapsed.server && <>
+        <div className="flex border-b-2 border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
+          <button onClick={()=>setServerTab('incomplete')} className={`px-4 py-2 text-xs font-bold transition-all ${serverTab==='incomplete'?'text-black dark:text-white border-b-2 border-black dark:border-white -mb-[2px]':'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`}>
+            수정전 ({serverItems.filter(i=>!isReviewed(i)).length})
+          </button>
+          <button onClick={()=>setServerTab('complete')} className={`px-4 py-2 text-xs font-bold transition-all ${serverTab==='complete'?'text-black dark:text-white border-b-2 border-black dark:border-white -mb-[2px]':'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`}>
+            수정완료 ({serverItems.filter(i=>isReviewed(i)).length})
+          </button>
+        </div>
+        <DataTable data={serverTab==='incomplete'?serverItems.filter(i=>!isReviewed(i)):serverItems.filter(i=>isReviewed(i))} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
         rowClassName={(i:any)=>isReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)}/>}/>}
+        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)}/>}/></>}
     </div>
 
     {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}
