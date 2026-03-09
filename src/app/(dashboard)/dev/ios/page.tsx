@@ -220,7 +220,7 @@ export default function AosPage() {
 
   const handleBulkDel = async(type:string, ids:Set<string>)=>{
     if(ids.size===0)return;
-    if(!confirm(ids.size+'건을 삭제할까요?'))return;
+    if(!confirm(ids.size+'\uac74\uc744 \uc0ad\uc81c\ud560\uae4c\uc694?'))return;
     const tbl = type==='dev'?'dev_items':type==='bug'?'bug_items':type==='common'?'common_bugs':'server_bugs';
     for(const id of Array.from(ids)) await supabase.from(tbl).delete().eq('id',id);
     if(type==='dev')setSelDev(new Set()); else if(type==='bug')setSelBug(new Set()); else if(type==='common')setSelCommon(new Set()); else setSelServer(new Set());
@@ -261,7 +261,7 @@ export default function AosPage() {
           {versionList.map(v=><option key={v} value={v}>{v}</option>)}
         </select>
         <button onClick={()=>{if(moveVer)onMove(moveVer);setMoveVer('');}} disabled={!moveVer}
-          className={}>
+          className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md border-2 font-bold ${moveVer?'bg-blue-600 text-white border-blue-700 hover:bg-blue-700':'bg-neutral-200 text-neutral-400 border-neutral-300 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600 cursor-not-allowed'}`}>
           ⇀ 이동 ({ids.size})
         </button>
       </div>
