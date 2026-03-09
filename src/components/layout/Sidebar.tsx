@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Smartphone, Apple, Bug,
   AlertTriangle, Server, ScrollText, Settings,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useVersion } from '@/components/layout/Header';
@@ -21,6 +21,8 @@ const navItems = [
   { label: '앱 오류', href: '/bugs', icon: Bug },
   { label: '공통 오류', href: '/bugs/common', icon: AlertTriangle },
   { label: '서버 오류', href: '/bugs/server', icon: Server },
+  { type: 'divider' as const, label: '히스토리' },
+  { label: '히스토리북', href: '/history', icon: BookOpen },
   { type: 'divider' as const, label: '관리', adminOnly: true },
   { label: '전송 이력', href: '/logs', icon: ScrollText, adminOnly: true },
   { label: '설정', href: '/settings', icon: Settings, adminOnly: true },
