@@ -209,6 +209,15 @@ export default function AosPage() {
     loadData();
   };
 
+  const handleVersionMove = async(type:string, ids:Set<string>, targetVersion:string)=>{
+    if(ids.size===0||!targetVersion)return;
+    if(!confirm(ids.size+'건을 '+targetVersion+'으로 이동할까요?'))return;
+    const tbl = type==='dev'?'dev_items':type==='bug'?'bug_items':type==='common'?'common_bugs':'server_bugs';
+    for(const id of Array.from(ids)) await supabase.from(tbl).update({version:targetVersion}).eq('id',id);
+    if(type==='dev')setSelDev(new Set()); else if(type==='bug')setSelBug(new Set()); else if(type==='common')setSelCommon(new Set()); else setSelServer(new Set());
+    loadData();
+  };
+
   const handleBulkDel = async(type:string, ids:Set<string>)=>{
     if(ids.size===0)return;
     if(!confirm(ids.size+'\uac74\uc744 \uc0ad\uc81c\ud560\uae4c\uc694?'))return;
@@ -236,7 +245,8 @@ export default function AosPage() {
     </div>
   );
 
-  const SendBar = ({ids,onSend,onDelete}:{ids:Set<string>;onSend:()=>void;onDelete:()=>void}) => ids.size > 0 ? (
+  const [moveVer, setMoveVer] = useState('');
+  const SendBar = ({ids,onSend,onDelete,onMove}:{ids:Set<string>;onSend:()=>void;onDelete:()=>void;onMove:(ver:string)=>void}) => ids.size > 0 ? (
     <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
       <button onClick={onSend} className="flex items-center gap-1 bg-black text-white text-xs px-3 py-1.5 rounded-md border-2 border-black font-bold hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] dark:bg-white dark:text-black dark:border-white">
         <Send size={12}/>선택 전송 ({ids.size})
@@ -244,6 +254,17 @@ export default function AosPage() {
       <button onClick={onDelete} className="flex items-center gap-1 bg-red-600 text-white text-xs px-3 py-1.5 rounded-md border-2 border-red-700 font-bold hover:bg-red-700">
         🗑 선택 삭제 ({ids.size})
       </button>
+      <div className="flex items-center gap-1 ml-2 border-l-2 border-neutral-300 dark:border-neutral-600 pl-2">
+        <select value={moveVer} onChange={e=>setMoveVer(e.target.value)} onClick={e=>e.stopPropagation()}
+          className="text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2 py-1 font-bold focus:border-black dark:focus:border-white focus:outline-none">
+          <option value="">버전 선택</option>
+          {versionList.map(v=><option key={v} value={v}>{v}</option>)}
+        </select>
+        <button onClick={()=>{if(moveVer)onMove(moveVer);setMoveVer('');}} disabled={!moveVer}
+          className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md border-2 font-bold ${moveVer?'bg-blue-600 text-white border-blue-700 hover:bg-blue-700':'bg-neutral-200 text-neutral-400 border-neutral-300 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600 cursor-not-allowed'}`}>
+          ⇀ 이동 ({ids.size})
+        </button>
+      </div>
     </div>
   ) : null;
 
@@ -260,7 +281,7 @@ export default function AosPage() {
       {!collapsed.dev && <DataTable data={devItems} columns={devCols} selectable selectedIds={selDev} onSelectionChange={setSelDev}
         rowClassName={(i:any)=>isDevReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['menu_item','description','department']} searchPlaceholder="개발항목 검색..." emptyMessage={loading?'로딩 중...':'등록된 항목 없음'}
-        toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)} onDelete={()=>handleBulkDel('dev',selDev)}/>}/>}
+        toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)} onDelete={()=>handleBulkDel('dev',selDev)} onMove={(ver:string)=>handleVersionMove('dev',selDev,ver)}/>}/>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
@@ -268,7 +289,7 @@ export default function AosPage() {
       {!collapsed.bug && <DataTable data={bugItems} columns={bugCols} selectable selectedIds={selBug} onSelectionChange={setSelBug}
         rowClassName={(i:any)=>isReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['location','description','reporter']} searchPlaceholder="앱 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)} onDelete={()=>handleBulkDel('bug',selBug)}/>}/>}
+        toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)} onDelete={()=>handleBulkDel('bug',selBug)} onMove={(ver:string)=>handleVersionMove('bug',selBug,ver)}/>}/>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
@@ -285,7 +306,7 @@ export default function AosPage() {
         <DataTable data={commonTab==='incomplete'?commonItems.filter(i=>!isReviewed(i)):commonItems.filter(i=>isReviewed(i))} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
         rowClassName={(i:any)=>isReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)} onDelete={()=>handleBulkDel('common',selCommon)}/>}/></>}
+        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)} onDelete={()=>handleBulkDel('common',selCommon)} onMove={(ver:string)=>handleVersionMove('common',selCommon,ver)}/>}/></>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
@@ -302,7 +323,7 @@ export default function AosPage() {
         <DataTable data={serverTab==='incomplete'?serverItems.filter(i=>!isReviewed(i)):serverItems.filter(i=>isReviewed(i))} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
         rowClassName={(i:any)=>isReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)}/>}/></>}
+        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)} onMove={(ver:string)=>handleVersionMove('server',selServer,ver)}/>}/></>}
     </div>
 
     {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}

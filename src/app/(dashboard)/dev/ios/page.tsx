@@ -209,6 +209,15 @@ export default function AosPage() {
     loadData();
   };
 
+  const handleVersionMove = async(type:string, ids:Set<string>, targetVersion:string)=>{
+    if(ids.size===0||!targetVersion)return;
+    if(!confirm(ids.size+'건을 '+targetVersion+'으로 이동할까요?'))return;
+    const tbl = type==='dev'?'dev_items':type==='bug'?'bug_items':type==='common'?'common_bugs':'server_bugs';
+    for(const id of Array.from(ids)) await supabase.from(tbl).update({version:targetVersion}).eq('id',id);
+    if(type==='dev')setSelDev(new Set()); else if(type==='bug')setSelBug(new Set()); else if(type==='common')setSelCommon(new Set()); else setSelServer(new Set());
+    loadData();
+  };
+
   const handleBulkDel = async(type:string, ids:Set<string>)=>{
     if(ids.size===0)return;
     if(!confirm(ids.size+'건을 삭제할까요?'))return;
@@ -260,7 +269,7 @@ export default function AosPage() {
       {!collapsed.dev && <DataTable data={devItems} columns={devCols} selectable selectedIds={selDev} onSelectionChange={setSelDev}
         rowClassName={(i:any)=>isDevReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['menu_item','description','department']} searchPlaceholder="개발항목 검색..." emptyMessage={loading?'로딩 중...':'등록된 항목 없음'}
-        toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)} onDelete={()=>handleBulkDel('dev',selDev)}/>}/>}
+        toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)} onDelete={()=>handleBulkDel('dev',selDev)} onMove={(ver:string)=>handleVersionMove('dev',selDev,ver)}/>}/>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
@@ -268,7 +277,7 @@ export default function AosPage() {
       {!collapsed.bug && <DataTable data={bugItems} columns={bugCols} selectable selectedIds={selBug} onSelectionChange={setSelBug}
         rowClassName={(i:any)=>isReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['location','description','reporter']} searchPlaceholder="앱 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)} onDelete={()=>handleBulkDel('bug',selBug)}/>}/>}
+        toolbar={<SendBar ids={selBug} onSend={()=>handleSend('bug',selBug)} onDelete={()=>handleBulkDel('bug',selBug)} onMove={(ver:string)=>handleVersionMove('bug',selBug,ver)}/>}/>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
@@ -285,7 +294,7 @@ export default function AosPage() {
         <DataTable data={commonTab==='incomplete'?commonItems.filter(i=>!isReviewed(i)):commonItems.filter(i=>isReviewed(i))} columns={commonCols} selectable selectedIds={selCommon} onSelectionChange={setSelCommon}
         rowClassName={(i:any)=>isReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['location','description']} searchPlaceholder="공통 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)} onDelete={()=>handleBulkDel('common',selCommon)}/>}/></>}
+        toolbar={<SendBar ids={selCommon} onSend={()=>handleSend('common',selCommon)} onDelete={()=>handleBulkDel('common',selCommon)} onMove={(ver:string)=>handleVersionMove('common',selCommon,ver)}/>}/></>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
@@ -302,7 +311,7 @@ export default function AosPage() {
         <DataTable data={serverTab==='incomplete'?serverItems.filter(i=>!isReviewed(i)):serverItems.filter(i=>isReviewed(i))} columns={serverCols} selectable selectedIds={selServer} onSelectionChange={setSelServer}
         rowClassName={(i:any)=>isReviewed(i)?'bg-neutral-200 dark:bg-neutral-800/50':'bg-white dark:bg-neutral-700/40'}
         searchKeys={['location','description']} searchPlaceholder="서버 오류 검색..." emptyMessage={loading?'로딩 중...':'등록된 오류 없음'}
-        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)}/>}/></>}
+        toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)} onMove={(ver:string)=>handleVersionMove('server',selServer,ver)}/>}/></>}
     </div>
 
     {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}
