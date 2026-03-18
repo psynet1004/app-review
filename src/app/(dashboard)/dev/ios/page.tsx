@@ -8,6 +8,7 @@ import { useVersion } from '@/components/layout/Header';
 import type { DevStatus, FixStatus, Priority, ReviewStatus } from '@/lib/types/database';
 import { CommentChat, CommentBadge } from '@/components/common/CommentChat';
 import { QAResultBadge, isQAComplete } from '@/components/common/QAResult';
+import { InlineDevSel } from '@/components/common/InlineDevSel';
 
 const PLATFORM = 'iOS';
 const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
@@ -176,7 +177,7 @@ export default function AosPage() {
     {key:'is_required',label:'필수',width:'w-8',align:'center' as const,render:(i:any)=>i.is_required?<span className="text-xs font-bold text-red-600 dark:text-red-400">Y</span>:<span className="text-neutral-300 dark:text-neutral-600">-</span>},
     {key:'department',label:'부서',width:'w-24',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
     {key:'requester',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.requester||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-28',align:'center' as const,render:(i:any)=><InlineDevSel item={i} table="dev_items"/>},
+    {key:'developer',label:'개발담당',width:'w-28',align:'center' as const,render:(i:any)=><InlineDevSel item={i} table="dev_items" developers={devTeam} onUpdated={loadData}/>},
     {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><select value={i.dev_status} onChange={e=>{e.stopPropagation();handleDevStatusChange(i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="대기">대기</option><option value="개발중">개발중</option><option value="개발완료">개발완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><DevReviewSel item={i}/>},
     {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="dev_items" onUpdated={loadData}/>},
@@ -191,7 +192,7 @@ export default function AosPage() {
     {key:'description',label:'설명',width:'',render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-neutral-500 dark:text-neutral-400 text-xs text-left whitespace-pre-wrap hover:underline cursor-pointer ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</button>},
     {key:'department',label:'부서',width:'w-24',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
     {key:'reporter',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.reporter||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-28',align:'center' as const,render:(i:any)=><InlineDevSel item={i} table="bug_items"/>},
+    {key:'developer',label:'개발담당',width:'w-28',align:'center' as const,render:(i:any)=><InlineDevSel item={i} table="bug_items" developers={devTeam} onUpdated={loadData}/>},
     {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><select value={i.fix_status} onChange={e=>{e.stopPropagation();handleFixStatusChange('bug_items',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="미수정">미수정</option><option value="수정중">수정중</option><option value="수정완료">수정완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
     {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="bug_items" onUpdated={loadData}/>},
@@ -204,7 +205,7 @@ export default function AosPage() {
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="common_bugs"/>};
     if(c.key==='qa_results') return {...c,render:(i:any)=><QAResultBadge item={i} table="common_bugs" onUpdated={loadData}/>};
     if(c.key==='fix_status') return {...c,render:(i:any)=><select value={i.fix_status} onChange={e=>{e.stopPropagation();handleFixStatusChange('common_bugs',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="미수정">미수정</option><option value="수정중">수정중</option><option value="수정완료">수정완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>};
-    if(c.key==='developer') return {...c,render:(i:any)=><InlineDevSel item={i} table="common_bugs"/>};
+    if(c.key==='developer') return {...c,render:(i:any)=><InlineDevSel item={i} table="common_bugs" developers={devTeam} onUpdated={loadData}/>};
     if(c.key==='comments') return {...c,render:(i:any)=><CommentBadge itemId={i.id} itemType="common_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'common_bugs',title:i.location})}/>};
     return c;
   });
@@ -213,7 +214,7 @@ export default function AosPage() {
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="server_bugs"/>};
     if(c.key==='qa_results') return {...c,render:(i:any)=><QAResultBadge item={i} table="server_bugs" onUpdated={loadData}/>};
     if(c.key==='fix_status') return {...c,render:(i:any)=><select value={i.fix_status} onChange={e=>{e.stopPropagation();handleFixStatusChange('server_bugs',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="미수정">미수정</option><option value="수정중">수정중</option><option value="수정완료">수정완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>};
-    if(c.key==='developer') return {...c,render:(i:any)=><InlineDevSel item={i} table="server_bugs"/>};
+    if(c.key==='developer') return {...c,render:(i:any)=><InlineDevSel item={i} table="server_bugs" developers={devTeam} onUpdated={loadData}/>};
     if(c.key==='comments') return {...c,render:(i:any)=><CommentBadge itemId={i.id} itemType="server_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'server_bugs',title:i.location})}/>};
     return c;
   });
@@ -286,53 +287,6 @@ export default function AosPage() {
       </div>
     </div>
   ) : null;
-
-  // Inline developer multi-select for list rows
-  const InlineDevSel = ({item,table}:{item:any;table:string}) => {
-    const [open,setOpen]=useState(false);
-    const ref=useRef<HTMLDivElement>(null);
-    const val = item.developer_ids||item.developer_id||'';
-    const selectedIds = val ? String(val).split(',').filter(Boolean) : [];
-    const names = selectedIds.map(id=>developers.find(d=>d.id===id)?.name).filter(Boolean);
-    const toggle = (id:string) => {
-      const next = selectedIds.includes(id) ? selectedIds.filter(x=>x!==id) : [...selectedIds,id];
-      const newVal = next.join(',');
-      supabase.from(table).update({developer_ids:newVal||null,developer_id:null}).eq('id',item.id).then(()=>loadData());
-    };
-    const toggleGroup = (ids:string[]) => {
-      const allSelected = ids.every(id=>selectedIds.includes(id));
-      const next = allSelected ? selectedIds.filter(x=>!ids.includes(x)) : Array.from(new Set([...selectedIds,...ids]));
-      const newVal = next.join(',');
-      supabase.from(table).update({developer_ids:newVal||null,developer_id:null}).eq('id',item.id).then(()=>loadData());
-    };
-    const clear = () => {
-      supabase.from(table).update({developer_ids:null,developer_id:null}).eq('id',item.id).then(()=>loadData());
-      setOpen(false);
-    };
-    const groups:{label:string;items:any[]}[]=[
-      {label:'AOS\ud300',items:devTeam.filter(d=>d.department==='\uac1c\ubc1c\ud300'&&d.platform==='AOS')},
-      {label:'iOS\ud300',items:devTeam.filter(d=>d.department==='\uac1c\ubc1c\ud300'&&d.platform==='iOS')},
-      {label:'\uc11c\ubc84\ud300',items:devTeam.filter(d=>d.department==='\uc11c\ubc84(\ubc31\uc564\ub4dc)'||d.department==='\uc11c\ubc84(\uc2dc\uc2a4\ud15c)')},
-    ].filter(g=>g.items.length>0);
-    useEffect(()=>{const handler=(e:MouseEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false);};document.addEventListener('mousedown',handler);return()=>document.removeEventListener('mousedown',handler);},[]);
-    return(
-      <div ref={ref} className="relative">
-        <button onClick={e=>{e.stopPropagation();setOpen(!open);}} className="text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:underline">
-          {names.length ? names.join(', ') : <span className="text-neutral-300 dark:text-neutral-600">\ubbf8\ubc30\uc815</span>}
-        </button>
-        {open && (
-          <div className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] max-h-64 overflow-y-auto min-w-[180px]" onClick={e=>e.stopPropagation()}>
-            <button type="button" onClick={clear} className={`w-full text-left px-3 py-2 text-xs font-medium border-b border-neutral-200 dark:border-neutral-700 ${selectedIds.length===0?'bg-black text-white dark:bg-white dark:text-black':'hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}>\ubbf8\ubc30\uc815</button>
-            {groups.map(g=>{const gIds=g.items.map(d=>d.id);const allSel=gIds.every(id=>selectedIds.includes(id));return(<div key={g.label}>
-              <button type="button" onClick={()=>toggleGroup(gIds)} className={`w-full text-left px-3 py-1.5 text-[10px] font-black uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between ${allSel?'bg-neutral-900 text-white dark:bg-white dark:text-black':'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'}`}><span>{g.label} \uc804\uccb4</span><span className="text-[10px]">{allSel?'\u2713':g.items.length+'\uba85'}</span></button>
-              {g.items.map(d=>(<button type="button" key={d.id} onClick={()=>toggle(d.id)} className={`w-full text-left px-3 pl-5 py-1.5 text-xs font-medium border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2 ${selectedIds.includes(d.id)?'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white':'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 text-neutral-700 dark:text-neutral-300'}`}><span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] ${selectedIds.includes(d.id)?'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black':'border-neutral-300 dark:border-neutral-600'}`}>{selectedIds.includes(d.id)?'\u2713':''}</span>{d.name}</button>))}
-            </div>);})}
-          </div>
-        )}
-      </div>
-    );
-  };
-
 
   const versionList = allVersions.map(v => v.version);
 
