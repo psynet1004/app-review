@@ -51,7 +51,7 @@ export function InlineDevSel({ item, table, developers, onUpdated }: InlineDevSe
         {names.length ? names.join(", ") : <span className="text-neutral-300 dark:text-neutral-600">미배정</span>}
       </button>
       {open && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-y-auto min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] overflow-y-auto min-w-[200px] max-h-[70vh]" onClick={(e) => e.stopPropagation()}>
           <button type="button" onClick={clear} className={`w-full text-left px-3 py-2 text-xs font-medium border-b border-neutral-200 dark:border-neutral-700 ${selectedIds.length === 0 ? "bg-black text-white dark:bg-white dark:text-black" : "hover:bg-neutral-50 dark:hover:bg-neutral-800"}`}>미배정</button>
           {groups.map((g) => {
             const gIds = g.items.map((d: any) => d.id);
