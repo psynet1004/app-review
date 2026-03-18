@@ -47,6 +47,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
     onUpdated();
   };
 
+  const needsAttention = !allDone && (item.review_status === '검수완료');
   const badgeColor = allDone
     ? "bg-green-100 text-green-700 border-green-400 dark:bg-green-900/30 dark:text-green-400 dark:border-green-600"
     : hasAny
@@ -57,7 +58,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
     <div ref={ref} className="relative">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-2 whitespace-nowrap ${badgeColor}`}
+        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-2 whitespace-nowrap ${badgeColor} ${needsAttention ? "animate-pulse ring-2 ring-red-400 ring-offset-1" : ""}`}
       >
         {allDone ? "✓ 완료" : hasAny ? `${doneCount}/${QA_CATEGORIES.length}` : "검수결과"}
       </button>
