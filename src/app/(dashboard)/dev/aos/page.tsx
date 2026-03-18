@@ -150,6 +150,21 @@ export default function AosPage() {
     </select>
   );
 
+  
+  // Inline status change handlers
+  const handleDevStatusChange = async(id:string, val:string) => {
+    await supabase.from('dev_items').update({dev_status:val}).eq('id',id);
+    loadData();
+  };
+  const handleFixStatusChange = async(table:string, id:string, val:string) => {
+    await supabase.from(table).update({fix_status:val}).eq('id',id);
+    loadData();
+  };
+  const handleDevAssignChange = async(table:string, id:string, val:string) => {
+    await supabase.from(table).update({developer_ids:val||null,developer_id:null}).eq('id',id);
+    loadData();
+  };
+
   const isDevReviewed = (item:any) => item.dev_status==='배포완료' && item.review_status==='검수완료' && isQAComplete(item);
 
   const devCols = [
@@ -161,8 +176,8 @@ export default function AosPage() {
     {key:'is_required',label:'필수',width:'w-8',align:'center' as const,render:(i:any)=>i.is_required?<span className="text-xs font-bold text-red-600 dark:text-red-400">Y</span>:<span className="text-neutral-300 dark:text-neutral-600">-</span>},
     {key:'department',label:'부서',width:'w-24',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
     {key:'requester',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.requester||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
-    {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.dev_status} type="dev"/>},
+    {key:'developer',label:'개발담당',width:'w-28',align:'center' as const,render:(i:any)=><select value={i.developer_ids||i.developer_id||''} onChange={e=>{e.stopPropagation();handleDevAssignChange('dev_items',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold max-w-[100px]"><option value="">미배정</option>{devTeam.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>},
+    {key:'dev_status',label:'상태',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><select value={i.dev_status} onChange={e=>{e.stopPropagation();handleDevStatusChange(i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="대기">대기</option><option value="개발중">개발중</option><option value="개발완료">개발완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><DevReviewSel item={i}/>},
     {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="dev_items" onUpdated={loadData}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="dev_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'dev_items',title:i.menu_item})}/>},
@@ -176,8 +191,8 @@ export default function AosPage() {
     {key:'description',label:'설명',width:'',render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-neutral-500 dark:text-neutral-400 text-xs text-left whitespace-pre-wrap hover:underline cursor-pointer ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</button>},
     {key:'department',label:'부서',width:'w-24',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
     {key:'reporter',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.reporter||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
-    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
+    {key:'developer',label:'개발담당',width:'w-28',align:'center' as const,render:(i:any)=><select value={i.developer_ids||i.developer_id||''} onChange={e=>{e.stopPropagation();handleDevAssignChange('bug_items',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold max-w-[100px]"><option value="">미배정</option>{devTeam.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>},
+    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><select value={i.fix_status} onChange={e=>{e.stopPropagation();handleFixStatusChange('bug_items',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="미수정">미수정</option><option value="수정중">수정중</option><option value="수정완료">수정완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i} table="bug_items"/>},
     {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="bug_items" onUpdated={loadData}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="bug_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'bug_items',title:i.location})}/>},
@@ -188,6 +203,8 @@ export default function AosPage() {
     if(c.key==='location') return {...c,render:(i:any)=><div><button onClick={()=>setShowForm({type:'common',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>{i.planning_link_url && <a href={i.planning_link_url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="ml-1.5 inline-flex items-center gap-1 text-[11px] text-white dark:text-black font-bold bg-blue-600 dark:bg-blue-400 hover:bg-blue-700 dark:hover:bg-blue-500 px-2 py-0.5 rounded border-2 border-blue-700 dark:border-blue-500 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] hover:shadow-none transition-all">🔗 {i.planning_link_name||'링크'}</a>}</div>};
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="common_bugs"/>};
     if(c.key==='qa_results') return {...c,render:(i:any)=><QAResultBadge item={i} table="common_bugs" onUpdated={loadData}/>};
+    if(c.key==='fix_status') return {...c,render:(i:any)=><select value={i.fix_status} onChange={e=>{e.stopPropagation();handleFixStatusChange('common_bugs',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="미수정">미수정</option><option value="수정중">수정중</option><option value="수정완료">수정완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>};
+    if(c.key==='developer') return {...c,render:(i:any)=><select value={i.developer_ids||i.developer_id||''} onChange={e=>{e.stopPropagation();handleDevAssignChange('common_bugs',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold max-w-[100px]"><option value="">미배정</option>{devTeam.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>};
     if(c.key==='comments') return {...c,render:(i:any)=><CommentBadge itemId={i.id} itemType="common_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'common_bugs',title:i.location})}/>};
     return c;
   });
@@ -195,6 +212,8 @@ export default function AosPage() {
     if(c.key==='location') return {...c,render:(i:any)=><div><button onClick={()=>setShowForm({type:'server',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>{i.planning_link_url && <a href={i.planning_link_url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="ml-1.5 inline-flex items-center gap-1 text-[11px] text-white dark:text-black font-bold bg-blue-600 dark:bg-blue-400 hover:bg-blue-700 dark:hover:bg-blue-500 px-2 py-0.5 rounded border-2 border-blue-700 dark:border-blue-500 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] hover:shadow-none transition-all">🔗 {i.planning_link_name||'링크'}</a>}</div>};
     if(c.key==='review_status') return {...c,render:(i:any)=><ReviewSel item={i} table="server_bugs"/>};
     if(c.key==='qa_results') return {...c,render:(i:any)=><QAResultBadge item={i} table="server_bugs" onUpdated={loadData}/>};
+    if(c.key==='fix_status') return {...c,render:(i:any)=><select value={i.fix_status} onChange={e=>{e.stopPropagation();handleFixStatusChange('server_bugs',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="미수정">미수정</option><option value="수정중">수정중</option><option value="수정완료">수정완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>};
+    if(c.key==='developer') return {...c,render:(i:any)=><select value={i.developer_ids||i.developer_id||''} onChange={e=>{e.stopPropagation();handleDevAssignChange('server_bugs',i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold max-w-[100px]"><option value="">미배정</option>{devTeam.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>};
     if(c.key==='comments') return {...c,render:(i:any)=><CommentBadge itemId={i.id} itemType="server_bugs" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'server_bugs',title:i.location})}/>};
     return c;
   });

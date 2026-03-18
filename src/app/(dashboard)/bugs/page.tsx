@@ -96,6 +96,16 @@ export default function AppBugsPage() {
       <option value="검수전">검수전</option><option value="검수중">검수중</option><option value="검수완료">검수완료</option>
     </select>
   );
+  
+  const handleFixStatusInline = async(id:string, val:string) => {
+    await supabase.from('bug_items').update({fix_status:val}).eq('id',id);
+    loadData();
+  };
+  const handleDevAssignInline = async(id:string, val:string) => {
+    await supabase.from('bug_items').update({developer_ids:val||null,developer_id:null}).eq('id',id);
+    loadData();
+  };
+
   const isReviewed = (item:any) => (item.fix_status==='수정완료'||item.fix_status==='배포완료') && item.review_status==='검수완료' && isQAComplete(item);
 
   const makeCols=(platform:'AOS'|'iOS')=>[
@@ -105,8 +115,8 @@ export default function AppBugsPage() {
     {key:'description',label:'설명',width:'',render:(i:any)=><button onClick={()=>setShowForm({platform,id:i.id})} className={`text-neutral-500 dark:text-neutral-400 text-xs text-left whitespace-pre-wrap hover:underline ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</button>},
     {key:'department',label:'부서',width:'w-24',align:'center' as const,render:(i:any)=><span className="text-xs">{i.department||'-'}</span>},
     {key:'reporter',label:'담당자',width:'w-20',align:'center' as const,render:(i:any)=><span className="text-xs">{i.reporter||'-'}</span>},
-    {key:'developer',label:'개발담당',width:'w-24',align:'center' as const,render:(i:any)=>getDevNames(i)},
-    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><StatusBadge status={i.fix_status} type="fix"/>},
+    {key:'developer',label:'개발담당',width:'w-28',align:'center' as const,render:(i:any)=><select value={i.developer_ids||i.developer_id||''} onChange={e=>{e.stopPropagation();handleDevAssignInline(i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold max-w-[100px]"><option value="">미배정</option>{devTeam.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>},
+    {key:'fix_status',label:'수정결과',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><select value={i.fix_status} onChange={e=>{e.stopPropagation();handleFixStatusInline(i.id,e.target.value)}} onClick={e=>e.stopPropagation()} className="text-xs border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-700 dark:text-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-neutral-400 font-bold"><option value="미수정">미수정</option><option value="수정중">수정중</option><option value="수정완료">수정완료</option><option value="배포완료">배포완료</option><option value="보류">보류</option></select>},
     {key:'review_status',label:'검수',width:'w-24',align:'center' as const,render:(i:any)=><ReviewSel item={i}/>},
     {key:'qa_results',label:'검수결과',width:'w-24',align:'center' as const,render:(i:any)=><QAResultBadge item={i} table="bug_items" onUpdated={loadData}/>},
     {key:'comments',label:'💬',width:'w-10',align:'center' as const,render:(i:any)=><CommentBadge itemId={i.id} itemType="bug_items" count={commentCounts[i.id]||0} hasNew={!!commentNew[i.id]} onClick={()=>setShowComment({id:i.id,type:'bug_items',title:i.location})}/>},
