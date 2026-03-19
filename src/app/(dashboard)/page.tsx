@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Smartphone, Apple, Bug, AlertTriangle, Server, Send } from 'lucide-react';
+import { Smartphone, Apple, Bug, AlertTriangle, Server, Send, Database } from 'lucide-react';
 
 interface Stats {
   aosCount: number; iosCount: number;
@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const cards = stats ? [
     { label: 'AOS 개발', value: stats.aosCount, icon: Smartphone, accent: stats.aosCount > 0, color: 'blue' as const },
     { label: 'iOS 개발', value: stats.iosCount, icon: Apple, accent: stats.iosCount > 0, color: 'blue' as const },
+    { label: '서버 개발', value: stats.serverDevCount || 0, icon: Server, accent: (stats.serverDevCount || 0) > 0, color: 'blue' as const },
     { label: '앱 오류', value: stats.bugCount, icon: Bug, accent: stats.bugCount > 0, color: 'red' as const },
     { label: '공통 오류', value: stats.commonBugCount, icon: AlertTriangle, accent: stats.commonBugCount > 0, color: 'red' as const },
     { label: '서버 오류', value: stats.serverBugCount, icon: Server, accent: stats.serverBugCount > 0, color: 'red' as const },

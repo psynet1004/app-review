@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Smartphone, Apple, Bug,
-  AlertTriangle, Server, ScrollText, Settings,
+  AlertTriangle, Server, ScrollText, Settings, Database,
   ChevronLeft, ChevronRight, Users,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -17,6 +17,7 @@ const navItems = [
   { type: 'divider' as const, label: '개발항목' },
   { label: 'AOS', href: '/dev/aos', icon: Smartphone },
   { label: 'iOS', href: '/dev/ios', icon: Apple },
+  { label: '서버', href: '/dev/server', icon: Database },
   { type: 'divider' as const, label: '오류관리' },
   { label: '앱 오류', href: '/bugs', icon: Bug },
   { label: '공통 오류', href: '/bugs/common', icon: AlertTriangle },

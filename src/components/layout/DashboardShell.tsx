@@ -16,6 +16,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [versions, setVersions] = useState<AppVersion[]>([]);
   const [aosVersion, setAosVersion] = useState('');
   const [iosVersion, setIosVersion] = useState('');
+  const [serverVersion, setServerVersion] = useState('');
   const [userName, setUserName] = useState('');
   const [userDept, setUserDept] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -42,11 +43,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     setVersions(vs);
     const aosVs = vs.filter(v => v.platform === 'AOS');
     const iosVs = vs.filter(v => v.platform === 'iOS');
+    const serverVs = vs.filter(v => v.platform === 'SERVER');
     setAosVersion(prev =>
       prev && aosVs.some(v => v.version === prev) ? prev : (aosVs[0]?.version || '')
     );
     setIosVersion(prev =>
       prev && iosVs.some(v => v.version === prev) ? prev : (iosVs[0]?.version || '')
+    );
+    setServerVersion(prev =>
+      prev && serverVs.some(v => v.version === prev) ? prev : (serverVs[0]?.version || '')
     );
   }, [supabase]);
 
@@ -82,9 +87,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     <DarkContext.Provider value={{ dark, toggle: toggleDark }}>
       <VersionContext.Provider
         value={{
-          aosVersion, iosVersion, setAosVersion, setIosVersion,
+          aosVersion, iosVersion, serverVersion, setAosVersion, setIosVersion, setServerVersion,
           aosVersions: versions.filter(v => v.platform === 'AOS'),
           iosVersions: versions.filter(v => v.platform === 'iOS'),
+          serverVersions: versions.filter(v => v.platform === 'SERVER'),
           refreshVersions: loadVersions, userName, userDept, userEmail,
         }}
       >

@@ -9,13 +9,13 @@ import type { AppVersion } from '@/lib/types/database';
 import { useDark } from '@/components/layout/DashboardShell';
 
 export const VersionContext = createContext<{
-  aosVersion: string; iosVersion: string;
-  setAosVersion: (v: string) => void; setIosVersion: (v: string) => void;
-  aosVersions: AppVersion[]; iosVersions: AppVersion[];
+  aosVersion: string; iosVersion: string; serverVersion: string;
+  setAosVersion: (v: string) => void; setIosVersion: (v: string) => void; setServerVersion: (v: string) => void;
+  aosVersions: AppVersion[]; iosVersions: AppVersion[]; serverVersions: AppVersion[];
   refreshVersions: () => void; userName: string; userDept: string; userEmail: string;
 }>({
-  aosVersion: '', iosVersion: '', setAosVersion: () => {}, setIosVersion: () => {},
-  aosVersions: [], iosVersions: [], refreshVersions: () => {}, userName: '', userDept: '', userEmail: '',
+  aosVersion: '', iosVersion: '', serverVersion: '', setAosVersion: () => {}, setIosVersion: () => {}, setServerVersion: () => {},
+  aosVersions: [], iosVersions: [], serverVersions: [], refreshVersions: () => {}, userName: '', userDept: '', userEmail: '',
 });
 
 export function useVersion() { return useContext(VersionContext); }
@@ -38,6 +38,7 @@ export default function Header() {
       <div className="flex items-center gap-3">
         <VersionDropdown label="AOS" versions={ctx.aosVersions} selected={ctx.aosVersion} onSelect={ctx.setAosVersion} refresh={ctx.refreshVersions} />
         <VersionDropdown label="iOS" versions={ctx.iosVersions} selected={ctx.iosVersion} onSelect={ctx.setIosVersion} refresh={ctx.refreshVersions} />
+        <VersionDropdown label="SERVER" versions={ctx.serverVersions} selected={ctx.serverVersion} onSelect={ctx.setServerVersion} refresh={ctx.refreshVersions} />
       </div>
       <div className="flex items-center gap-2">
         <button onClick={toggle} className="p-2 rounded-md border-2 border-neutral-300 dark:border-neutral-600 hover:border-black dark:hover:border-white text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-all" title={dark ? '라이트 모드' : '다크 모드'}>
@@ -96,7 +97,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: { lab
           <div className="px-4 py-2 text-[10px] font-black text-neutral-500 uppercase tracking-widest border-b-2 border-black dark:border-neutral-700">{label} 버전</div>
           <div className="max-h-60 overflow-y-auto">
             {versions.map(v => (
-              <div key={v.id} onClick={() => { onSelect(v.version); setOpen(false); router.push(label === 'AOS' ? '/dev/aos' : '/dev/ios'); }} className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer group transition-all border-b border-neutral-100 dark:border-neutral-800 ${v.version === selected ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}>
+              <div key={v.id} onClick={() => { onSelect(v.version); setOpen(false); router.push(label === 'AOS' ? '/dev/aos' : label === 'iOS' ? '/dev/ios' : '/dev/server'); }} className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer group transition-all border-b border-neutral-100 dark:border-neutral-800 ${v.version === selected ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}>
                 <div className="flex items-center gap-2.5">
                   {editingId === v.id ? (
                     <input type="text" value={editVer} onChange={e => setEditVer(e.target.value)}
