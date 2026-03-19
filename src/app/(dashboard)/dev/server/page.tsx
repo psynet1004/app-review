@@ -304,8 +304,6 @@ export default function AosPage() {
         toolbar={<SendBar ids={selDev} onSend={()=>handleSend('dev',selDev)} onDelete={()=>handleBulkDel('dev',selDev)} onMove={(ver:string)=>handleVersionMove('dev',selDev,ver)}/>}/>}
     </div>
 
-    </div>
-
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
       <SectionHeader title="⚠️ 공통 오류" count={commonItems.length} color="cel-common" sectionKey="common" onAdd={()=>setShowForm({type:'common'})}/>
       {!collapsed.common && <>
