@@ -19,6 +19,7 @@ export default function DashboardPage() {
       const [aos, ios, serverDev, bugs, common, server, unsent, logs] = await Promise.all([
         supabase.from('dev_items').select('id', { count: 'exact', head: true }).eq('platform', 'AOS'),
         supabase.from('dev_items').select('id', { count: 'exact', head: true }).eq('platform', 'iOS'),
+        supabase.from('dev_items').select('id', { count: 'exact', head: true }).eq('platform', 'SERVER'),
         supabase.from('bug_items').select('id', { count: 'exact', head: true }),
         supabase.from('common_bugs').select('id', { count: 'exact', head: true }),
         supabase.from('server_bugs').select('id', { count: 'exact', head: true }),
