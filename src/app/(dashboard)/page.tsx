@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Smartphone, Apple, Bug, AlertTriangle, Server, Send, Database } from 'lucide-react';
 
 interface Stats {
-  aosCount: number; iosCount: number;
+  aosCount: number; iosCount: number; serverDevCount: number;
   bugCount: number; commonBugCount: number; serverBugCount: number;
   unsent: number; recentLogs: any[];
 }
@@ -16,7 +16,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
-      const [aos, ios, bugs, common, server, unsent, logs] = await Promise.all([
+      const [aos, ios, serverDev, bugs, common, server, unsent, logs] = await Promise.all([
         supabase.from('dev_items').select('id', { count: 'exact', head: true }).eq('platform', 'AOS'),
         supabase.from('dev_items').select('id', { count: 'exact', head: true }).eq('platform', 'iOS'),
         supabase.from('bug_items').select('id', { count: 'exact', head: true }),
@@ -28,6 +28,7 @@ export default function DashboardPage() {
 
       setStats({
         aosCount: aos.count || 0, iosCount: ios.count || 0,
+        serverDevCount: serverDev.count || 0,
         bugCount: bugs.count || 0, commonBugCount: common.count || 0,
         serverBugCount: server.count || 0, unsent: unsent.count || 0,
         recentLogs: logs.data || [],
