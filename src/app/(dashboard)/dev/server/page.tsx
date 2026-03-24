@@ -356,7 +356,8 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
   const save=async()=>{
     if(!f.menu_item.trim()){alert('항목명 필수');return;}
     ss(true);
-    const p:any={...f,platform,developer_ids:f.developer_ids||null,developer_id:null};
+    const devIds = Array.isArray(f.developer_ids) ? (f.developer_ids.length > 0 ? f.developer_ids : null) : (f.developer_ids && f.developer_ids !== '' ? [f.developer_ids] : null);
+    const p:any={...f,platform,developer_ids:devIds,developer_id:null};
     if(editId)await supabase.from('dev_items').update(p).eq('id',editId);
     else{delete p.review_status;await supabase.from('dev_items').insert(p);for(const cp of crossWith){await supabase.from('dev_items').insert({...p,platform:cp});}}
     ss(false);onSaved();
@@ -397,7 +398,8 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
   const save=async()=>{
     if(!f.location.trim()){alert('위치 필수');return;}
     ss(true);
-    const p:any={...f,developer_ids:f.developer_ids||null,developer_id:null};
+    const bugDevIds = Array.isArray(f.developer_ids) ? (f.developer_ids.length > 0 ? f.developer_ids : null) : (f.developer_ids && f.developer_ids !== '' ? [f.developer_ids] : null);
+    const p:any={...f,developer_ids:bugDevIds,developer_id:null};
     if(table!=='bug_items')delete p.platform;
     if(table==='bug_items'&&hasPlatform)p.platform=hasPlatform;
     if(!editId) delete p.review_status;
