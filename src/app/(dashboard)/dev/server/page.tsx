@@ -351,8 +351,18 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_ids:data.developer_ids||data.developer_id||'',dev_status:data.dev_status||'대기',review_status:data.review_status||'검수전',planning_link_name:data.planning_link_name||'',planning_link_url:data.planning_link_url||'',note:data.note||''});});},[editId]);
-  const save=async()=>{if(!f.menu_item.trim()){alert('항목명 필수');return;}ss(true);const p:any={...f,platform,developer_ids:f.developer_ids||null,developer_id:null};if(editId)await supabase.from('dev_items').update(p).eq('id',editId);else{delete p.review_status;await supabase.from('dev_items').insert(p);}ss(false);onSaved();};
-  return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose}><div className="p-6 space-y-4">
+  const OTHER_PLATFORMS = platform==='AOS'?['iOS','SERVER']:platform==='iOS'?['AOS','SERVER']:['AOS','iOS'];
+  const [crossWith,setCrossWith]=useState<string[]>([]);
+  const save=async()=>{
+    if(!f.menu_item.trim()){alert('항목명 필수');return;}
+    ss(true);
+    const p:any={...f,platform,developer_ids:f.developer_ids||null,developer_id:null};
+    if(editId)await supabase.from('dev_items').update(p).eq('id',editId);
+    else{delete p.review_status;await supabase.from('dev_items').insert(p);for(const cp of crossWith){await supabase.from('dev_items').insert({...p,platform:cp});}}
+    ss(false);onSaved();
+  };
+  const crossBar=!editId&&<div className="flex items-center gap-2">{OTHER_PLATFORMS.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="w-4 h-4 rounded accent-blue-500"/><span className={`text-xs font-bold px-2 py-0.5 rounded ${crossWith.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span></label>)}</div>||undefined;
+  return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose} headerExtra={crossBar}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVersion}/>
       <Inp l="항목명 *" v={f.menu_item} c={v=>sf(p=>({...p,menu_item:v}))}/>
@@ -382,19 +392,21 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId){sf(p=>({...p,reporter:p.reporter||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({platform:data.platform||hasPlatform||'AOS',version:data.version||'',location:data.location||'',description:data.description||'',priority:data.priority||'보통',department:data.department||'',reporter:data.reporter||'',developer_ids:data.developer_ids||data.developer_id||'',fix_status:data.fix_status||'미수정',review_status:data.review_status||'검수전',planning_link_name:data.planning_link_name||'',planning_link_url:data.planning_link_url||'',note:data.note||''});});},[editId]);
+  const BUG_OTHER = hasPlatform==='AOS'?['iOS']:hasPlatform==='iOS'?['AOS']:[];
+  const [bugCross,setBugCross]=useState<string[]>([]);
   const save=async()=>{
     if(!f.location.trim()){alert('위치 필수');return;}
     ss(true);
     const p:any={...f,developer_ids:f.developer_ids||null,developer_id:null};
     if(table!=='bug_items')delete p.platform;
     if(table==='bug_items'&&hasPlatform)p.platform=hasPlatform;
-    // 새 등록 시 review_status 제외 (DB default 사용)
     if(!editId) delete p.review_status;
     if(editId)await supabase.from(table).update(p).eq('id',editId);
-    else await supabase.from(table).insert(p);
+    else{await supabase.from(table).insert(p);for(const cp of bugCross){await supabase.from(table).insert({...p,platform:cp});}}
     ss(false);onSaved();
   };
-  return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose}><div className="p-6 space-y-4">
+  const bugBar=!editId&&BUG_OTHER.length>0&&<div className="flex items-center gap-2">{BUG_OTHER.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={bugCross.includes(cp)} onChange={e=>setBugCross(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="w-4 h-4 rounded accent-blue-500"/><span className={`text-xs font-bold px-2 py-0.5 rounded ${bugCross.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span></label>)}</div>||undefined;
+  return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose} headerExtra={bugBar}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       {hasPlatform?<Inp l="플랫폼" v={hasPlatform} c={()=>{}} disabled/>:
        table==='bug_items'?<Sel l="플랫폼" v={f.platform} c={v=>sf(p=>({...p,platform:v}))} opts={[{v:'AOS',l:'AOS'},{v:'iOS',l:'iOS'}]}/>:
@@ -419,9 +431,9 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
 }
 
 /* ============ Shared UI ============ */
-function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return(
+function Modal({title,onClose,children,headerExtra}:{title:string;onClose:()=>void;children:React.ReactNode;headerExtra?:React.ReactNode}){return(
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-    <div className="flex items-center justify-between px-6 py-4 border-b"><h2 className="font-bold text-lg">{title}</h2><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>{children}</div></div>);}
+    <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700"><h2 className="font-bold text-lg text-neutral-900 dark:text-white">{title}</h2><div className="flex items-center gap-3">{headerExtra}{<button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-neutral-200"><X size={20}/></button>}</div></div>{children}</div></div>);}
 function Foot({editId,onDel,onClose,onSave,saving}:any){return(
   <div className="flex justify-between px-6 py-4 border-t bg-gray-50">{editId?<button onClick={onDel} className="text-red-500 hover:text-red-700 text-sm font-medium">삭제</button>:<div/>}
     <div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button><button onClick={onSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>);}
