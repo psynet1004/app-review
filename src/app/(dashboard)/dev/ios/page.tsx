@@ -16,7 +16,7 @@ const EXCLUDED_DEPTS = ['서버(시스템)','재무','데이터/광고','AIAE','
 
 export default function AosPage() {
   const supabase = createClient();
-  const { iosVersion: selectedVer, iosVersions: allVersions, userName, userDept, userEmail } = useVersion();
+  const { iosVersion: selectedVer, iosVersions: allVersions, aosVersion, serverVersion, userName, userDept, userEmail } = useVersion();
   const [rawDev, setRawDev] = useState<any[]>([]);
   const [rawBug, setRawBug] = useState<any[]>([]);
   const [rawCommon, setRawCommon] = useState<any[]>([]);
@@ -346,7 +346,7 @@ export default function AosPage() {
         toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)} onMove={(ver:string)=>handleVersionMove('server',selServer,ver)}/>}/></>}
     </div>
 
-    {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}
+    {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)} crossVersions={{'AOS':aosVersion,'SERVER':serverVersion}}/>}
     {showForm?.type==='bug'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="bug_items" hasPlatform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('bug',id)}/>}
     {showForm?.type==='common'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="common_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('common',id)}/>}
     {showForm?.type==='server'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="server_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('server',id)}/>}
@@ -355,7 +355,7 @@ export default function AosPage() {
 }
 
 /* ============ DevForm ============ */
-function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel}:any){
+function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel,crossVersions}:any){
   const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_ids:'',dev_status:'대기' as DevStatus,review_status:'검수전' as ReviewStatus,planning_link_url:'',planning_link_name:'',note:''});
   const [saving,ss]=useState(false);
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
@@ -368,7 +368,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
     const devIds = Array.isArray(f.developer_ids) ? (f.developer_ids.length > 0 ? f.developer_ids : null) : (f.developer_ids && f.developer_ids !== '' ? [f.developer_ids] : null);
     const p:any={...f,platform,developer_ids:devIds,developer_id:null};
     if(editId)await supabase.from('dev_items').update(p).eq('id',editId);
-    else{delete p.review_status;await supabase.from('dev_items').insert(p);for(const cp of crossWith){await supabase.from('dev_items').insert({...p,platform:cp});}}
+    else{delete p.review_status;await supabase.from('dev_items').insert(p);for(const cp of crossWith){const cpVer=(crossVersions&&crossVersions[cp])||p.version;await supabase.from('dev_items').insert({...p,platform:cp,version:cpVer});}}
     ss(false);onSaved();
   };
   const crossBar=!editId&&<div className="flex items-center gap-2">{OTHER_PLATFORMS.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none group"><input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="sr-only"/><span className={`relative flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full border-2 transition-all duration-300 ${crossWith.includes(cp)?'bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.6)] animate-pulse':'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 text-neutral-400 dark:text-neutral-500'}`}><span className={`inline-block w-3.5 h-3.5 rounded border-2 flex-shrink-0 transition-all duration-200 ${crossWith.includes(cp)?'bg-white border-white':'border-current'}`}>{crossWith.includes(cp)&&<svg viewBox="0 0 10 10" className="w-full h-full text-blue-600"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</span>{cp} 함께</span></label>)}</div>||undefined;
