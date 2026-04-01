@@ -44,14 +44,17 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     const aosVs = vs.filter(v => v.platform === 'AOS');
     const iosVs = vs.filter(v => v.platform === 'iOS');
     const serverVs = vs.filter(v => v.platform === 'SERVER');
+    // 완료(is_current=true) 처리 없는 버전 중 가장 최신, 없으면 첫 번째
+    const activeVer = (vs: AppVersion[]) =>
+      vs.find(v => !v.is_current)?.version || vs[0]?.version || '';
     setAosVersion(prev =>
-      prev && aosVs.some(v => v.version === prev) ? prev : (aosVs[0]?.version || '')
+      prev && aosVs.some(v => v.version === prev) ? prev : activeVer(aosVs)
     );
     setIosVersion(prev =>
-      prev && iosVs.some(v => v.version === prev) ? prev : (iosVs[0]?.version || '')
+      prev && iosVs.some(v => v.version === prev) ? prev : activeVer(iosVs)
     );
     setServerVersion(prev =>
-      prev && serverVs.some(v => v.version === prev) ? prev : (serverVs[0]?.version || '')
+      prev && serverVs.some(v => v.version === prev) ? prev : activeVer(serverVs)
     );
   }, [supabase]);
 

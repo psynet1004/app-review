@@ -361,7 +361,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_ids:data.developer_ids||data.developer_id||'',dev_status:data.dev_status||'대기',review_status:data.review_status||'검수전',planning_link_name:data.planning_link_name||'',planning_link_url:data.planning_link_url||'',note:data.note||''});});},[editId]);
   const OTHER_PLATFORMS = platform==='AOS'?['iOS','SERVER']:platform==='iOS'?['AOS','SERVER']:['AOS','iOS'];
-  const [crossWith,setCrossWith]=useState<string[]>([]);
+  const [crossWith,setCrossWith]=useState<string[]>(OTHER_PLATFORMS);
   const save=async()=>{
     if(!f.menu_item.trim()){alert('항목명 필수');return;}
     ss(true);
@@ -371,7 +371,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
     else{delete p.review_status;await supabase.from('dev_items').insert(p);for(const cp of crossWith){await supabase.from('dev_items').insert({...p,platform:cp});}}
     ss(false);onSaved();
   };
-  const crossBar=!editId&&<div className="flex items-center gap-2">{OTHER_PLATFORMS.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="w-4 h-4 rounded accent-blue-500"/><span className={`text-xs font-bold px-2 py-0.5 rounded ${crossWith.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span></label>)}</div>||undefined;
+  const crossBar=!editId&&<div className="flex items-center gap-2">{OTHER_PLATFORMS.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none group"><input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="sr-only"/><span className={`relative flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full border-2 transition-all duration-300 ${crossWith.includes(cp)?'bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.6)] animate-pulse':'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 text-neutral-400 dark:text-neutral-500'}`}><span className={`inline-block w-3.5 h-3.5 rounded border-2 flex-shrink-0 transition-all duration-200 ${crossWith.includes(cp)?'bg-white border-white':'border-current'}`}>{crossWith.includes(cp)&&<svg viewBox="0 0 10 10" className="w-full h-full text-blue-600"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</span>{cp} 함께</span></label>)}</div>||undefined;
   return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose} headerExtra={crossBar}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVersion}/>
