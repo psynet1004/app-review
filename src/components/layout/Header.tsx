@@ -22,7 +22,6 @@ export const VersionContext = createContext<{
 
 export function useVersion() { return useContext(VersionContext); }
 
-// 버전명에서 순수 버전 번호만 추출: "V51.0.7 (업데이트)" → "V51.0.7"
 export function stripVersionLabel(version: string): string {
   return version.replace(/\s*\(.*?\)\s*/g, '').trim();
 }
@@ -59,9 +58,7 @@ export default function Header() {
         {user && (
           <div className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300 font-medium">
             <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-md border-2 border-black dark:border-neutral-500 flex items-center justify-center overflow-hidden">
-              {user.user_metadata?.avatar_url
-                ? <img src={user.user_metadata.avatar_url} alt="" className="w-8 h-8 rounded-md" />
-                : <User size={14} strokeWidth={2.5} />}
+              {user.user_metadata?.avatar_url ? <img src={user.user_metadata.avatar_url} alt="" className="w-8 h-8 rounded-md" /> : <User size={14} strokeWidth={2.5} />}
             </div>
             <span className="hidden sm:inline">{user.user_metadata?.full_name || user.email}</span>
           </div>
@@ -122,8 +119,6 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
     refresh();
   };
 
-  // 버전명에 "(다음 업데이트)" 문구 토글
-  // DB 컬럼 추가 없이 버전명 자체에 괄호 문구로 표시
   const toggleNextUpdate = async (e: React.MouseEvent, v: AppVersion) => {
     e.stopPropagation();
     const hasSuffix = /\(.*?\)/.test(v.version);
@@ -157,7 +152,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => { setOpen(false); setEditingId(null); }} />
-          <div className="absolute top-full left-0 mt-2 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)] z-30 min-w-[400px] overflow-hidden">
+          <div className="absolute top-full left-0 mt-2 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)] z-30 min-w-[420px] overflow-hidden">
             <div className="px-4 py-2 text-[10px] font-black text-neutral-500 uppercase tracking-widest border-b-2 border-black dark:border-neutral-700">{label} 버전</div>
             <div className="max-h-60 overflow-y-auto">
               {versions.map(v => {
@@ -177,9 +172,11 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                       setEditingId(null);
                       router.push(label === 'AOS' ? '/dev/aos' : label === 'iOS' ? '/dev/ios' : '/dev/server');
                     }}
+                    // 수정 중일 때는 중립 배경, 선택된 행은 반전, 나머지는 hover
+                    style={isEditing ? { backgroundColor: '#f5f5f5' } : undefined}
                     className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-all border-b border-neutral-100 dark:border-neutral-800 ${
                       isEditing
-                        ? 'bg-neutral-50 dark:bg-neutral-800'
+                        ? ''
                         : isSelected
                           ? 'bg-black text-white dark:bg-white dark:text-black'
                           : 'hover:bg-neutral-100 dark:hover:bg-neutral-700'
@@ -188,7 +185,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                     {/* 왼쪽: 버전명 or 수정 input + 뱃지 */}
                     <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
                       {isEditing ? (
-                        /* inline style로 확실하게 색상 고정 — Tailwind 우선순위 문제 방지 */
+                        // 수정 input: inline style 강제 고정으로 라이트/다크 무관하게 항상 보임
                         <input
                           type="text"
                           value={editVer}
@@ -203,8 +200,17 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                           }}
                           autoFocus
                           onClick={e => e.stopPropagation()}
-                          className="font-bold text-sm border-2 border-blue-500 outline-none w-40 px-2 py-0.5 rounded"
-                          style={{ backgroundColor: '#ffffff', color: '#111111' }}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            color: '#111111',
+                            border: '2px solid #3b82f6',
+                            borderRadius: '4px',
+                            padding: '2px 8px',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            outline: 'none',
+                            width: '160px',
+                          }}
                         />
                       ) : (
                         <span className={`font-bold whitespace-nowrap ${isSelected ? '' : 'text-neutral-700 dark:text-neutral-200'}`}>
@@ -212,11 +218,11 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                         </span>
                       )}
 
-                      {/* 다음 업데이트 뱃지 — 완료 시 자동 사라짐 */}
+                      {/* 다음 업데이트 뱃지 */}
                       {isNextUpdate && !isEditing && (
                         <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border-2 whitespace-nowrap shrink-0 ${
                           isSelected
-                            ? 'border-orange-300 text-orange-200 bg-orange-900/30'
+                            ? 'border-orange-400 text-orange-400 bg-orange-100'
                             : 'border-orange-400 text-orange-500 bg-orange-50 dark:bg-orange-900/30'
                         }`}>
                           {suffix}
@@ -227,7 +233,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                       {v.is_current && !isEditing && (
                         <span className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border-2 font-black shrink-0 ${
                           isSelected
-                            ? 'border-red-300 text-red-200 bg-red-900/30'
+                            ? 'border-red-400 text-red-400 bg-red-100'
                             : 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                         }`}>완료</span>
                       )}
@@ -236,63 +242,48 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                     {/* 오른쪽: 액션 버튼 */}
                     <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                       {isEditing ? (
-                        /* 수정 모드: 수정완료만 표시 */
                         <button
                           onMouseDown={() => { savingRef.current = true; }}
                           onClick={() => handleEditSave(v.id, v.version)}
-                          className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded bg-blue-500 hover:bg-blue-600 text-white font-bold transition-colors"
+                          style={{ backgroundColor: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
                           <Check size={11} strokeWidth={3} />
                           수정완료
                         </button>
                       ) : (
-                        /* 일반 모드: ▶다음 + 완료 + ✏️ + 🗑️ 항상 표시 */
+                        // 버튼 색상: isSelected 시 반전 배경 기준으로 명확하게 대비
                         <div className="flex items-center gap-1">
-                          {/* ▶ 다음 업데이트 토글 — 완료된 버전엔 표시 안 함 */}
                           {!v.is_current && (
                             <button
                               onClick={e => toggleNextUpdate(e, v)}
-                              className={`text-[10px] px-1.5 py-0.5 rounded border-2 font-bold transition-colors whitespace-nowrap ${
-                                isNextUpdate
-                                  ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/30'
-                                  : isSelected
-                                    ? 'border-neutral-400 text-neutral-300 hover:border-orange-400 hover:text-orange-300'
-                                    : 'border-neutral-400 dark:border-neutral-500 text-neutral-500 dark:text-neutral-300 hover:border-orange-400 hover:text-orange-500 dark:hover:border-orange-400 dark:hover:text-orange-400'
-                              }`}
+                              style={isNextUpdate
+                                ? { border: '2px solid #f97316', color: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', borderRadius: '4px', padding: '1px 6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }
+                                : isSelected
+                                  ? { border: '2px solid #555', color: '#333', backgroundColor: 'transparent', borderRadius: '4px', padding: '1px 6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }
+                                  : { border: '2px solid #888', color: '#555', backgroundColor: 'transparent', borderRadius: '4px', padding: '1px 6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }
+                              }
                             >
                               ▶ 다음
                             </button>
                           )}
-                          {/* 완료 / 해제 */}
                           <button
                             onClick={e => toggleComplete(e, v)}
-                            className={`text-[10px] px-1.5 py-0.5 rounded border-2 font-bold transition-colors ${
-                              isSelected
-                                ? 'border-neutral-400 text-neutral-200 hover:border-red-300 hover:text-red-300'
-                                : 'border-neutral-400 dark:border-neutral-500 text-neutral-600 dark:text-neutral-300 hover:border-red-500 hover:text-red-500 dark:hover:border-red-400 dark:hover:text-red-400'
-                            }`}
+                            style={isSelected
+                              ? { border: '2px solid #555', color: '#333', backgroundColor: 'transparent', borderRadius: '4px', padding: '1px 6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }
+                              : { border: '2px solid #888', color: '#555', backgroundColor: 'transparent', borderRadius: '4px', padding: '1px 6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }
+                            }
                           >
                             {v.is_current ? '해제' : '완료'}
                           </button>
-                          {/* 수정 */}
                           <button
                             onClick={e => { e.stopPropagation(); setEditingId(v.id); setEditVer(v.version); }}
-                            className={`p-0.5 rounded transition-colors ${
-                              isSelected
-                                ? 'text-neutral-300 hover:text-blue-300'
-                                : 'text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400'
-                            }`}
+                            style={isSelected ? { color: '#555', padding: '2px' } : { color: '#888', padding: '2px' }}
                           >
                             <Pencil size={13} strokeWidth={2.5} />
                           </button>
-                          {/* 삭제 */}
                           <button
                             onClick={e => handleDelete(e, v.id)}
-                            className={`p-0.5 rounded transition-colors ${
-                              isSelected
-                                ? 'text-neutral-300 hover:text-red-300'
-                                : 'text-neutral-500 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400'
-                            }`}
+                            style={isSelected ? { color: '#555', padding: '2px' } : { color: '#888', padding: '2px' }}
                           >
                             <Trash2 size={13} strokeWidth={2.5} />
                           </button>
