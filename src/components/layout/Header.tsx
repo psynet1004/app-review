@@ -95,8 +95,8 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
     await supabase.from('common_bugs').update({ version: trimmed }).eq('version', oldVersion);
     await supabase.from('server_bugs').update({ version: trimmed }).eq('version', oldVersion);
     setEditingId(null);
+    await refresh();
     if (selected === oldVersion) onSelect(trimmed);
-    refresh();
   };
 
   const handleAdd = async () => {
@@ -125,16 +125,21 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
     const pureName = stripVersionLabel(v.version);
     const newVersion = hasSuffix ? pureName : `${pureName} (다음 업데이트)`;
     await supabase.from('app_versions').update({ version: newVersion }).eq('id', v.id);
+    // dev_items, bug_items 버전명도 동기화
     for (const t of ['dev_items', 'bug_items']) {
       await supabase.from(t).update({ version: newVersion }).eq('version', v.version).eq('platform', platform);
     }
     await supabase.from('common_bugs').update({ version: newVersion }).eq('version', v.version);
     await supabase.from('server_bugs').update({ version: newVersion }).eq('version', v.version);
+    // refresh 먼저 → DB 반영 완료 후 선택 버전명 동기화 (순서 중요: 리스트 사라짐 방지)
+    await refresh();
     if (selected === v.version) onSelect(newVersion);
-    refresh();
   };
 
+  // 헤더 버튼 표시: 순수 버전명 + 다음 업데이트 여부
   const selectedLabel = stripVersionLabel(selected);
+  const selectedSuffix = getVersionSuffix(selected);
+  const selectedIsNext = !!selectedSuffix && !versions.find(v => v.version === selected)?.is_current;
 
   return (
     <div className="relative">
@@ -145,6 +150,12 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
         >
           <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white shrink-0" />
           {label} {selectedLabel || '미설정'}
+          {/* 다음 업데이트 버전 선택 시 헤더에도 표시 */}
+          {selectedIsNext && (
+            <span style={{ fontSize: '9px', fontWeight: 900, padding: '1px 5px', borderRadius: '3px', border: '1.5px solid #f97316', color: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', whiteSpace: 'nowrap' }}>
+              다음
+            </span>
+          )}
           <ChevronDown size={12} strokeWidth={3} className={`transition shrink-0 ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
