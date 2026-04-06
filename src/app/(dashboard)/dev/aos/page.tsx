@@ -72,16 +72,18 @@ export default function AosPage() {
   ),[developers]);
 
   const filterVer = useCallback((items: any[], statusField: string) => {
-    if (!selectedVer) return items;
-    const thisVer = items.filter(i => i.version === selectedVer);
+    const pureSelectedVer = stripVersionLabel(selectedVer);
+    if (!pureSelectedVer) return items;
+    const thisVer = items.filter(i => stripVersionLabel(i.version) === pureSelectedVer);
     const verList = allVersions.map(v => v.version);
-    const curIdx = verList.indexOf(selectedVer);
-    const olderVers = curIdx >= 0 ? verList.slice(curIdx + 1) : [];
+    const pureVerList = verList.map(v => stripVersionLabel(v));
+    const curIdx = pureVerList.indexOf(pureSelectedVer);
+    const olderVers = curIdx >= 0 ? pureVerList.slice(curIdx + 1) : [];
     const incomplete = statusField === 'dev_status'
       ? ['대기','개발중','보류']
       : ['미수정','수정중','보류'];
     const carried = items
-      .filter(i => olderVers.includes(i.version) && incomplete.includes(i[statusField]))
+      .filter(i => olderVers.includes(stripVersionLabel(i.version)) && incomplete.includes(i[statusField]))
       .map(i => ({ ...i, _carried: true, _origVer: i.version }));
     return [...thisVer, ...carried];
   }, [selectedVer, allVersions]);
