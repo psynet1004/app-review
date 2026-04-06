@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, createContext, useContext, useRef } from 'react';
-import { LogOut, User, ChevronDown, Plus, Trash2, Moon, Sun, Pencil } from 'lucide-react';
+import { LogOut, User, ChevronDown, Plus, Trash2, Moon, Sun, Pencil, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { AppVersion } from '@/lib/types/database';
@@ -58,75 +58,186 @@ export default function Header() {
   );
 }
 
-function VersionDropdown({ label, versions, selected, onSelect, refresh }: { label: string; versions: AppVersion[]; selected: string; onSelect: (v: string) => void; refresh: () => void; }) {
+function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
+  label: string;
+  versions: AppVersion[];
+  selected: string;
+  onSelect: (v: string) => void;
+  refresh: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [newVer, setNewVer] = useState('');
-  const [editingId, setEditingId] = useState<string|null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editVer, setEditVer] = useState('');
-  const handleEdit = async (id: string, oldVersion: string) => {
-    if (!editVer.trim() || editVer === oldVersion) { setEditingId(null); return; }
-    await supabase.from('app_versions').update({ version: editVer.trim() }).eq('id', id);
-    // Also update related items
-    const tables = ['dev_items', 'bug_items'];
-    for (const t of tables) {
-      await supabase.from(t).update({ version: editVer.trim() }).eq('version', oldVersion).eq('platform', platform);
-    }
-    setEditingId(null);
-    if (selected === oldVersion) onSelect(editVer.trim());
-    refresh();
-  };
+
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
   const router = useRouter();
-  const platform = label as 'AOS' | 'iOS';
-  const handleAdd = async () => { if (!newVer.trim()) return; await supabase.from('app_versions').insert({ platform, version: newVer.trim(), is_current: false }); setNewVer(''); refresh(); };
-  const handleDelete = async (e: React.MouseEvent, id: string) => { e.stopPropagation(); if (!confirm('삭제?')) return; await supabase.from('app_versions').delete().eq('id', id); refresh(); };
-  const toggleComplete = async (e: React.MouseEvent, v: AppVersion) => { e.stopPropagation(); await supabase.from('app_versions').update({ is_current: !v.is_current }).eq('id', v.id); refresh(); };
+  const platform = label as 'AOS' | 'iOS' | 'SERVER';
+
+  const handleEditSave = async (id: string, oldVersion: string) => {
+    if (!editVer.trim() || editVer.trim() === oldVersion) { setEditingId(null); return; }
+    const newVersion = editVer.trim();
+    await supabase.from('app_versions').update({ version: newVersion }).eq('id', id);
+    await supabase.from('dev_items').update({ version: newVersion }).eq('version', oldVersion).eq('platform', platform);
+    await supabase.from('bug_items').update({ version: newVersion }).eq('version', oldVersion).eq('platform', platform);
+    await supabase.from('common_bugs').update({ version: newVersion }).eq('version', oldVersion);
+    await supabase.from('server_bugs').update({ version: newVersion }).eq('version', oldVersion);
+    setEditingId(null);
+    if (selected === oldVersion) onSelect(newVersion);
+    refresh();
+  };
+
+  const handleAdd = async () => {
+    if (!newVer.trim()) return;
+    await supabase.from('app_versions').insert({ platform, version: newVer.trim(), is_current: false, is_next_update: false });
+    setNewVer('');
+    refresh();
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm('삭제?')) return;
+    await supabase.from('app_versions').delete().eq('id', id);
+    refresh();
+  };
+
+  const toggleComplete = async (e: React.MouseEvent, v: AppVersion) => {
+    e.stopPropagation();
+    await supabase.from('app_versions').update({ is_current: !v.is_current }).eq('id', v.id);
+    refresh();
+  };
+
+  const toggleNextUpdate = async (e: React.MouseEvent, v: AppVersion) => {
+    e.stopPropagation();
+    const newVal = !(v as any).is_next_update;
+    await supabase.from('app_versions').update({ is_next_update: newVal }).eq('id', v.id);
+    refresh();
+  };
 
   return (
     <div className="relative">
       <div className="flex items-center border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-md overflow-hidden">
-        <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-xs text-black dark:text-white px-3 py-1.5 font-bold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
-          <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white" />{label} {selected || '미설정'}
-          <ChevronDown size={12} strokeWidth={3} className={`transition ${open ? 'rotate-180' : ''}`} />
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center gap-2 text-xs text-black dark:text-white px-3 py-1.5 font-bold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all whitespace-nowrap"
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white shrink-0" />
+          {label} {selected || '미설정'}
+          <ChevronDown size={12} strokeWidth={3} className={`transition shrink-0 ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
-      {open && (<>
-        <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-        <div className="absolute top-full left-0 mt-2 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)] z-30 min-w-[240px] overflow-hidden">
-          <div className="px-4 py-2 text-[10px] font-black text-neutral-500 uppercase tracking-widest border-b-2 border-black dark:border-neutral-700">{label} 버전</div>
-          <div className="max-h-60 overflow-y-auto">
-            {versions.map(v => (
-              <div key={v.id} onClick={() => { onSelect(v.version); setOpen(false); router.push(label === 'AOS' ? '/dev/aos' : label === 'iOS' ? '/dev/ios' : '/dev/server'); }} className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer group transition-all border-b border-neutral-100 dark:border-neutral-800 ${v.version === selected ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}>
-                <div className="flex items-center gap-2.5">
-                  {editingId === v.id ? (
-                    <input type="text" value={editVer} onChange={e => setEditVer(e.target.value)}
-                      onKeyDown={e => { if(e.key==='Enter') handleEdit(v.id, v.version); if(e.key==='Escape') setEditingId(null); }}
-                      onBlur={() => handleEdit(v.id, v.version)}
-                      autoFocus onClick={e => e.stopPropagation()}
-                      className="font-bold text-sm bg-transparent border-b-2 border-blue-500 outline-none w-24 px-0 py-0" />
-                  ) : (
-                    <span className={`font-bold ${v.version === selected ? '' : 'text-neutral-700 dark:text-neutral-300'}`}>{v.version}</span>
-                  )}
-                  {v.is_current && <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border-2 border-red-500 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-black">완료</span>}
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => { setOpen(false); setEditingId(null); }} />
+          <div className="absolute top-full left-0 mt-2 bg-white dark:bg-neutral-900 border-2 border-black dark:border-neutral-600 rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,0.1)] z-30 min-w-[300px] overflow-hidden">
+            <div className="px-4 py-2 text-[10px] font-black text-neutral-500 uppercase tracking-widest border-b-2 border-black dark:border-neutral-700">{label} 버전</div>
+            <div className="max-h-60 overflow-y-auto">
+              {versions.map(v => (
+                <div
+                  key={v.id}
+                  onClick={() => {
+                    if (editingId === v.id) return;
+                    onSelect(v.version);
+                    setOpen(false);
+                    router.push(label === 'AOS' ? '/dev/aos' : label === 'iOS' ? '/dev/ios' : '/dev/server');
+                  }}
+                  className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer group transition-all border-b border-neutral-100 dark:border-neutral-800 ${v.version === selected ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                >
+                  {/* 왼쪽: 버전명 영역 */}
+                  <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
+                    {editingId === v.id ? (
+                      <input
+                        type="text"
+                        value={editVer}
+                        onChange={e => setEditVer(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleEditSave(v.id, v.version);
+                          if (e.key === 'Escape') setEditingId(null);
+                        }}
+                        autoFocus
+                        onClick={e => e.stopPropagation()}
+                        className="font-bold text-sm bg-transparent border-b-2 border-blue-500 outline-none w-32 px-0 py-0 text-black dark:text-white"
+                      />
+                    ) : (
+                      <span className={`font-bold ${v.version === selected ? '' : 'text-neutral-700 dark:text-neutral-300'} flex items-center gap-1.5 whitespace-nowrap`}>
+                        {v.version}
+                        {/* 다음 업데이트 뱃지: 드롭다운에만, 완료 처리 시 자동 사라짐 */}
+                        {(v as any).is_next_update && !v.is_current && (
+                          <span className="text-[10px] font-black text-orange-500 border-2 border-orange-400 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded leading-none">
+                            다음 업데이트
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {/* 완료 뱃지 */}
+                    {v.is_current && editingId !== v.id && (
+                      <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border-2 border-red-500 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-black shrink-0">완료</span>
+                    )}
+                  </div>
+
+                  {/* 오른쪽: 액션 버튼 영역 */}
+                  <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                    {editingId === v.id ? (
+                      /* 수정 모드일 때만 수정완료 버튼 표시 — 완료 버튼과 완전 분리 */
+                      <button
+                        onClick={() => handleEditSave(v.id, v.version)}
+                        className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded bg-blue-500 hover:bg-blue-600 text-white font-bold transition-colors"
+                      >
+                        <Check size={11} strokeWidth={3} />
+                        수정완료
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                        {/* 다음 업데이트 토글 버튼 (완료 전 버전만) */}
+                        {!v.is_current && (
+                          <button
+                            onClick={e => toggleNextUpdate(e, v)}
+                            title={(v as any).is_next_update ? '다음 업데이트 해제' : '다음 업데이트로 표시'}
+                            className={`text-[10px] px-1.5 py-0.5 rounded border-2 font-bold transition-colors ${
+                              (v as any).is_next_update
+                                ? 'border-orange-500 text-orange-500 bg-orange-50 dark:bg-orange-900/30'
+                                : 'border-neutral-300 dark:border-neutral-600 text-neutral-400 hover:border-orange-400 hover:text-orange-500'
+                            }`}
+                          >
+                            ▶ 다음
+                          </button>
+                        )}
+                        {/* 버전 전체 완료 처리 버튼 */}
+                        <button
+                          onClick={e => toggleComplete(e, v)}
+                          className="text-[10px] px-1.5 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 font-bold text-neutral-600 dark:text-neutral-300 hover:border-red-400 hover:text-red-500 transition-colors"
+                        >
+                          {v.is_current ? '해제' : '완료'}
+                        </button>
+                        {/* 버전명 수정 버튼 */}
+                        <button
+                          onClick={e => { e.stopPropagation(); setEditingId(v.id); setEditVer(v.version); }}
+                          className="text-neutral-400 hover:text-blue-500 transition-colors"
+                        >
+                          <Pencil size={13} strokeWidth={2.5} />
+                        </button>
+                        {/* 삭제 버튼 */}
+                        <button onClick={e => handleDelete(e, v.id)} className="text-neutral-400 hover:text-red-500 transition-colors">
+                          <Trash2 size={13} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                  <button onClick={e => toggleComplete(e, v)} className="text-[10px] px-1.5 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 font-bold">{v.is_current ? '해제' : '완료'}</button>
-                  <button onClick={e => { e.stopPropagation(); setEditingId(v.id); setEditVer(v.version); }} className="text-neutral-400 hover:text-blue-500"><Pencil size={13} strokeWidth={2.5} /></button>
-                  <button onClick={e => handleDelete(e, v.id)} className="text-neutral-400 hover:text-red-500"><Trash2 size={13} strokeWidth={2.5} /></button>
-                </div>
+              ))}
+            </div>
+            {versions.length === 0 && <div className="px-4 py-3 text-xs text-neutral-400 text-center font-medium">버전 없음</div>}
+            <div className="border-t-2 border-black dark:border-neutral-700 px-3 py-2.5">
+              <div className="flex items-center gap-1.5">
+                <input type="text" value={newVer} onChange={e => setNewVer(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder="새 버전 (예: V52.0.0)" className="flex-1 text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2.5 py-1.5 font-medium focus:border-black dark:focus:border-white focus:outline-none" />
+                <button onClick={handleAdd} disabled={!newVer.trim()} className="p-1.5 bg-black dark:bg-white text-white dark:text-black rounded-md border-2 border-black dark:border-white hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] disabled:opacity-30 font-bold"><Plus size={14} strokeWidth={3} /></button>
               </div>
-            ))}
-          </div>
-          {versions.length === 0 && <div className="px-4 py-3 text-xs text-neutral-400 text-center font-medium">버전 없음</div>}
-          <div className="border-t-2 border-black dark:border-neutral-700 px-3 py-2.5">
-            <div className="flex items-center gap-1.5">
-              <input type="text" value={newVer} onChange={e => setNewVer(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder="새 버전 (예: V52.0.0)" className="flex-1 text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2.5 py-1.5 font-medium focus:border-black dark:focus:border-white focus:outline-none" />
-              <button onClick={handleAdd} disabled={!newVer.trim()} className="p-1.5 bg-black dark:bg-white text-white dark:text-black rounded-md border-2 border-black dark:border-white hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] disabled:opacity-30 font-bold"><Plus size={14} strokeWidth={3} /></button>
             </div>
           </div>
-        </div>
-      </>)}
+        </>
+      )}
     </div>
   );
 }

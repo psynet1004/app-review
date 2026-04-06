@@ -169,7 +169,7 @@ export default function AosPage() {
   const isDevReviewed = (item:any) => item.dev_status==='배포완료' && item.review_status==='검수완료' && isQAComplete(item);
 
   const devCols = [
-    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
+    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version.replace(/\s*\(.*?\)\s*/g, '').trim()}<CarriedBadge item={i}/></div>},
     {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><div><button onClick={()=>setShowForm({type:'dev',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isDevReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.menu_item}</button>
       {i.planning_link_url && <a href={i.planning_link_url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="ml-1.5 inline-flex items-center gap-1 text-[11px] text-white dark:text-black font-bold bg-blue-600 dark:bg-blue-400 hover:bg-blue-700 dark:hover:bg-blue-500 px-2 py-0.5 rounded border-2 border-blue-700 dark:border-blue-500 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] hover:shadow-none transition-all">🔗 {i.planning_link_name||'링크'}</a>}
     </div>},
@@ -186,7 +186,7 @@ export default function AosPage() {
   ];
 
   const bugCols = [
-    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
+    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version.replace(/\s*\(.*?\)\s*/g, '').trim()}<CarriedBadge item={i}/></div>},
     {key:'priority',label:'우선순위',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'위치',sortable:true,render:(i:any)=><div><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>{i.planning_link_url && <a href={i.planning_link_url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="ml-1.5 inline-flex items-center gap-1 text-[11px] text-white dark:text-black font-bold bg-blue-600 dark:bg-blue-400 hover:bg-blue-700 dark:hover:bg-blue-500 px-2 py-0.5 rounded border-2 border-blue-700 dark:border-blue-500 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] hover:shadow-none transition-all">🔗 {i.planning_link_name||'링크'}</a>}</div>},
     {key:'description',label:'설명',width:'',render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-neutral-500 dark:text-white text-xs text-left whitespace-pre-wrap hover:underline cursor-pointer ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</button>},
