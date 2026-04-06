@@ -88,10 +88,24 @@ export default function AosPage() {
     return [...thisVer, ...carried];
   }, [selectedVer, allVersions]);
 
-  const devItems = useMemo(() => filterVer(rawDev, 'dev_status'), [rawDev, filterVer]);
-  const bugItems = useMemo(() => filterVer(rawBug, 'fix_status'), [rawBug, filterVer]);
-  const commonItems = useMemo(() => rawCommon, [rawCommon]);
-  const serverItems = useMemo(() => rawServer, [rawServer]);
+  const devItems = useMemo(() => {
+    const items = filterVer(rawDev, 'dev_status');
+    const done = (i:any) => i.dev_status==='배포완료' && i.review_status==='검수완료' && isQAComplete(i);
+    return [...items.filter(i=>!done(i)), ...items.filter(i=>done(i))];
+  }, [rawDev, filterVer]);
+  const bugItems = useMemo(() => {
+    const items = filterVer(rawBug, 'fix_status');
+    const done = (i:any) => (i.fix_status==='수정완료'||i.fix_status==='배포완료') && i.review_status==='검수완료' && isQAComplete(i);
+    return [...items.filter(i=>!done(i)), ...items.filter(i=>done(i))];
+  }, [rawBug, filterVer]);
+  const commonItems = useMemo(() => {
+    const done = (i:any) => (i.fix_status==='수정완료'||i.fix_status==='배포완료') && i.review_status==='검수완료' && isQAComplete(i);
+    return [...rawCommon.filter(i=>!done(i)), ...rawCommon.filter(i=>done(i))];
+  }, [rawCommon]);
+  const serverItems = useMemo(() => {
+    const done = (i:any) => (i.fix_status==='수정완료'||i.fix_status==='배포완료') && i.review_status==='검수완료' && isQAComplete(i);
+    return [...rawServer.filter(i=>!done(i)), ...rawServer.filter(i=>done(i))];
+  }, [rawServer]);
 
   const toggle = (k:string) => setCollapsed(p=>({...p,[k]:!p[k]}));
   const closeForm=()=>setShowForm(null);
