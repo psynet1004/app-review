@@ -71,6 +71,12 @@ export default function Header() {
   );
 }
 
+// hover 시 버튼 표시용 CSS (Tailwind group-hover 빌드 문제 우회)
+const hoverBtnStyle = `
+  .ver-row .ver-actions { visibility: hidden; }
+  .ver-row:hover .ver-actions { visibility: visible; }
+`;
+
 function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
   label: string; versions: AppVersion[]; selected: string; onSelect: (v: string) => void; refresh: () => void;
 }) {
@@ -119,19 +125,15 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
     refresh();
   };
 
+  // 다음 업데이트 토글: app_versions 버전명만 변경
+  // dev_items/bug_items는 건드리지 않음 → 페이지 filterVer가 stripVersionLabel로 비교하므로 리스트 유지
   const toggleNextUpdate = async (e: React.MouseEvent, v: AppVersion) => {
     e.stopPropagation();
     const hasSuffix = /\(.*?\)/.test(v.version);
     const pureName = stripVersionLabel(v.version);
     const newVersion = hasSuffix ? pureName : `${pureName} (다음 업데이트)`;
-    // 선택 버전이면 즉시 onSelect로 새 버전명 동기화 (ON/OFF 모두 리스트 유지)
-    if (selected === v.version) onSelect(newVersion);
     await supabase.from('app_versions').update({ version: newVersion }).eq('id', v.id);
-    for (const t of ['dev_items', 'bug_items']) {
-      await supabase.from(t).update({ version: newVersion }).eq('version', v.version).eq('platform', platform);
-    }
-    await supabase.from('common_bugs').update({ version: newVersion }).eq('version', v.version);
-    await supabase.from('server_bugs').update({ version: newVersion }).eq('version', v.version);
+    // DashboardShell.loadVersions가 pureMatch로 선택 버전 유지 → onSelect 불필요
     refresh();
   };
 
@@ -141,6 +143,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
 
   return (
     <div className="relative">
+      <style>{hoverBtnStyle}</style>
       <div className="flex items-center border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-md overflow-hidden">
         <button
           onClick={() => { setOpen(!open); setEditingId(null); }}
@@ -148,7 +151,6 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
         >
           <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white shrink-0" />
           {label} {selectedLabel || '미설정'}
-          {/* 헤더 버튼 우측: 다음 업데이트 뱃지 (suffix 텍스트 그대로) */}
           {selectedIsNext && (
             <span style={{ fontSize: '9px', fontWeight: 900, padding: '1px 5px', borderRadius: '3px', border: '1.5px solid #f97316', color: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', whiteSpace: 'nowrap' }}>
               {selectedSuffix}
@@ -182,7 +184,7 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                       router.push(label === 'AOS' ? '/dev/aos' : label === 'iOS' ? '/dev/ios' : '/dev/server');
                     }}
                     style={isEditing ? { backgroundColor: '#f5f5f5' } : undefined}
-                    className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-all border-b border-neutral-100 dark:border-neutral-800 group ${
+                    className={`ver-row flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-all border-b border-neutral-100 dark:border-neutral-800 ${
                       isEditing ? '' : isSelected
                         ? 'bg-black text-white dark:bg-white dark:text-black'
                         : 'hover:bg-neutral-100 dark:hover:bg-neutral-700'
@@ -226,16 +228,17 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                       )}
                     </div>
 
-                    {/* 오른쪽: 액션 버튼 — hover 시만 표시 */}
+                    {/* 오른쪽: 액션 버튼 — hover 시만 표시 (CSS visibility) */}
                     <div
-                      className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="ver-actions flex items-center gap-1 shrink-0"
+                      style={isEditing ? { visibility: 'visible' } : undefined}
                       onClick={e => e.stopPropagation()}
                     >
                       {isEditing ? (
                         <button
                           onMouseDown={() => { savingRef.current = true; }}
                           onClick={() => handleEditSave(v.id, v.version)}
-                          style={{ backgroundColor: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', opacity: 1 }}
+                          style={{ backgroundColor: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
                           <Check size={11} strokeWidth={3} />
                           수정완료
@@ -286,11 +289,9 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                   placeholder="새 버전 (예: V52.0.0)"
                   className="flex-1 text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2.5 py-1.5 font-medium focus:border-black dark:focus:border-white focus:outline-none"
                 />
-                <button
-                  onClick={handleAdd}
-                  disabled={!newVer.trim()}
-                  className="p-1.5 bg-black dark:bg-white text-white dark:text-black rounded-md border-2 border-black dark:border-white hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] disabled:opacity-30 font-bold"
-                ><Plus size={14} strokeWidth={3} /></button>
+                <button onClick={handleAdd} disabled={!newVer.trim()} className="p-1.5 bg-black dark:bg-white text-white dark:text-black rounded-md border-2 border-black dark:border-white hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] disabled:opacity-30 font-bold">
+                  <Plus size={14} strokeWidth={3} />
+                </button>
               </div>
             </div>
           </div>

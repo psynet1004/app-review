@@ -49,14 +49,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       const incomplete = vs.filter(v => !v.is_current);
       return incomplete[incomplete.length - 1]?.version || vs[0]?.version || '';
     };
+    // 순수 버전명으로 비교: "V51.0.7 (다음 업데이트)" 토글 시에도 현재 선택 유지
+    const pureMatch = (vs: AppVersion[], prev: string) => {
+      const purePrev = prev.replace(/\s*\(.*?\)\s*/g, '').trim();
+      return vs.some(v => v.version === prev || v.version.replace(/\s*\(.*?\)\s*/g, '').trim() === purePrev);
+    };
     setAosVersion(prev =>
-      prev && aosVs.some(v => v.version === prev) ? prev : activeVer(aosVs)
+      prev && pureMatch(aosVs, prev) ? prev : activeVer(aosVs)
     );
     setIosVersion(prev =>
-      prev && iosVs.some(v => v.version === prev) ? prev : activeVer(iosVs)
+      prev && pureMatch(iosVs, prev) ? prev : activeVer(iosVs)
     );
     setServerVersion(prev =>
-      prev && serverVs.some(v => v.version === prev) ? prev : activeVer(serverVs)
+      prev && pureMatch(serverVs, prev) ? prev : activeVer(serverVs)
     );
   }, [supabase]);
 
