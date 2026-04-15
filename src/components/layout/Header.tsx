@@ -31,6 +31,18 @@ function getVersionSuffix(version: string): string {
   return m ? m[1] : '';
 }
 
+// 완료 날짜 포맷: TIMESTAMPTZ → "yy.mm.dd"
+function formatCompletedDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  // 한국 시간 기준
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const yy = String(kst.getUTCFullYear()).slice(2);
+  const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(kst.getUTCDate()).padStart(2, '0');
+  return `${yy}.${mm}.${dd}`;
+}
+
 export default function Header() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const supabaseRef = useRef(createClient());
@@ -71,7 +83,6 @@ export default function Header() {
   );
 }
 
-// hover 시 버튼 표시용 CSS (Tailwind group-hover 빌드 문제 우회)
 const hoverBtnStyle = `
   .ver-row .ver-actions { visibility: hidden; }
   .ver-row:hover .ver-actions { visibility: visible; }
@@ -119,27 +130,43 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
     refresh();
   };
 
+  // 완료 처리: is_current 토글 + completed_at 저장/삭제
+  // 완료 ON → 버전명에서 (다음 업데이트) 등 suffix 제거 + selected 동기화
   const toggleComplete = async (e: React.MouseEvent, v: AppVersion) => {
     e.stopPropagation();
-    await supabase.from('app_versions').update({ is_current: !v.is_current }).eq('id', v.id);
+    const turningOn = !v.is_current;
+    const pureName = stripVersionLabel(v.version);
+    const updateData: any = {
+      is_current: turningOn,
+      // 완료 ON: 순수 버전명으로 정리 + 날짜 기록 / 완료 OFF: 날짜 삭제
+      version: turningOn ? pureName : v.version,
+      completed_at: turningOn ? new Date().toISOString() : null,
+    };
+    await supabase.from('app_versions').update(updateData).eq('id', v.id);
+    // 완료 ON 시: 선택 버전이 이 버전이면 순수 버전명으로 동기화 (suffix 제거)
+    if (turningOn && selected === v.version) onSelect(pureName);
     refresh();
   };
 
-  // 다음 업데이트 토글: app_versions 버전명만 변경
-  // dev_items/bug_items는 건드리지 않음 → 페이지 filterVer가 stripVersionLabel로 비교하므로 리스트 유지
   const toggleNextUpdate = async (e: React.MouseEvent, v: AppVersion) => {
     e.stopPropagation();
     const hasSuffix = /\(.*?\)/.test(v.version);
     const pureName = stripVersionLabel(v.version);
     const newVersion = hasSuffix ? pureName : `${pureName} (다음 업데이트)`;
     await supabase.from('app_versions').update({ version: newVersion }).eq('id', v.id);
-    // DashboardShell.loadVersions가 pureMatch로 선택 버전 유지 → onSelect 불필요
     refresh();
   };
 
+  // 헤더 버튼: 선택 버전의 전체 AppVersion 객체 찾기
+  const selectedVerObj = versions.find(v =>
+    v.version === selected || stripVersionLabel(v.version) === stripVersionLabel(selected)
+  );
   const selectedLabel = stripVersionLabel(selected);
+  const completedDate = selectedVerObj?.is_current
+    ? formatCompletedDate((selectedVerObj as any).completed_at)
+    : null;
   const selectedSuffix = getVersionSuffix(selected);
-  const selectedIsNext = !!selectedSuffix && !versions.find(v => v.version === selected)?.is_current;
+  const selectedIsNext = !!selectedSuffix && !selectedVerObj?.is_current;
 
   return (
     <div className="relative">
@@ -151,6 +178,13 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
         >
           <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white shrink-0" />
           {label} {selectedLabel || '미설정'}
+          {/* 완료된 버전: 업데이트 완료 날짜 뱃지 */}
+          {completedDate && (
+            <span style={{ fontSize: '9px', fontWeight: 900, padding: '1px 5px', borderRadius: '3px', border: '1.5px solid #6b7280', color: '#6b7280', backgroundColor: 'rgba(107,114,128,0.1)', whiteSpace: 'nowrap' }}>
+              업데이트 완료: {completedDate}
+            </span>
+          )}
+          {/* 다음 업데이트 버전 (완료 아닐 때만) */}
           {selectedIsNext && (
             <span style={{ fontSize: '9px', fontWeight: 900, padding: '1px 5px', borderRadius: '3px', border: '1.5px solid #f97316', color: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', whiteSpace: 'nowrap' }}>
               {selectedSuffix}
@@ -170,8 +204,10 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                 const pureVersion = stripVersionLabel(v.version);
                 const suffix = getVersionSuffix(v.version);
                 const isNextUpdate = !!suffix && !v.is_current;
-                const isSelected = v.version === selected;
+                // 선택 비교: 순수 버전명으로 (suffix 제거 후 비교)
+                const isSelected = stripVersionLabel(v.version) === stripVersionLabel(selected) || v.version === selected;
                 const isEditing = editingId === v.id;
+                const completedDateStr = v.is_current ? formatCompletedDate((v as any).completed_at) : null;
 
                 return (
                   <div
@@ -214,21 +250,25 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
                           {pureVersion}
                         </span>
                       )}
+                      {/* 다음 업데이트 뱃지 (완료 아닐 때만) */}
                       {isNextUpdate && !isEditing && (
                         <span style={isSelected
                           ? { fontSize: '10px', fontWeight: 900, padding: '1px 6px', borderRadius: '3px', border: '2px solid #fb923c', color: '#fb923c', backgroundColor: 'rgba(251,146,60,0.15)', whiteSpace: 'nowrap' }
                           : { fontSize: '10px', fontWeight: 900, padding: '1px 6px', borderRadius: '3px', border: '2px solid #f97316', color: '#f97316', backgroundColor: 'rgba(249,115,22,0.08)', whiteSpace: 'nowrap' }
                         }>{suffix}</span>
                       )}
+                      {/* 완료 뱃지 + 날짜 */}
                       {v.is_current && !isEditing && (
                         <span style={isSelected
                           ? { fontSize: '10px', fontWeight: 900, padding: '1px 6px', borderRadius: '3px', border: '2px solid #f87171', color: '#f87171', backgroundColor: 'rgba(248,113,113,0.15)', whiteSpace: 'nowrap' }
                           : { fontSize: '10px', fontWeight: 900, padding: '1px 6px', borderRadius: '3px', border: '2px solid #ef4444', color: '#dc2626', backgroundColor: 'rgba(239,68,68,0.08)', whiteSpace: 'nowrap' }
-                        }>완료</span>
+                        }>
+                          완료{completedDateStr ? ` ${completedDateStr}` : ''}
+                        </span>
                       )}
                     </div>
 
-                    {/* 오른쪽: 액션 버튼 — hover 시만 표시 (CSS visibility) */}
+                    {/* 오른쪽: 액션 버튼 */}
                     <div
                       className="ver-actions flex items-center gap-1 shrink-0"
                       style={isEditing ? { visibility: 'visible' } : undefined}
@@ -281,17 +321,8 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
             {versions.length === 0 && <div className="px-4 py-3 text-xs text-neutral-400 text-center font-medium">버전 없음</div>}
             <div className="border-t-2 border-black dark:border-neutral-700 px-3 py-2.5">
               <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  value={newVer}
-                  onChange={e => setNewVer(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                  placeholder="새 버전 (예: V52.0.0)"
-                  className="flex-1 text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2.5 py-1.5 font-medium focus:border-black dark:focus:border-white focus:outline-none"
-                />
-                <button onClick={handleAdd} disabled={!newVer.trim()} className="p-1.5 bg-black dark:bg-white text-white dark:text-black rounded-md border-2 border-black dark:border-white hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] disabled:opacity-30 font-bold">
-                  <Plus size={14} strokeWidth={3} />
-                </button>
+                <input type="text" value={newVer} onChange={e => setNewVer(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder="새 버전 (예: V52.0.0)" className="flex-1 text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2.5 py-1.5 font-medium focus:border-black dark:focus:border-white focus:outline-none" />
+                <button onClick={handleAdd} disabled={!newVer.trim()} className="p-1.5 bg-black dark:bg-white text-white dark:text-black rounded-md border-2 border-black dark:border-white hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] disabled:opacity-30 font-bold"><Plus size={14} strokeWidth={3} /></button>
               </div>
             </div>
           </div>

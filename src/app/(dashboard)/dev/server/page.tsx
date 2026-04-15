@@ -294,7 +294,7 @@ export default function AosPage() {
         <select value={moveVer} onChange={e=>setMoveVer(e.target.value)} onClick={e=>e.stopPropagation()}
           className="text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2 py-1 font-bold focus:border-black dark:focus:border-white focus:outline-none">
           <option value="">버전 선택</option>
-          {versionList.map(v=><option key={v} value={v}>{v}</option>)}
+          {versionList.map(v=><option key={v} value={v}>{v.replace(/\s*\(.*?\)\s*/g,"").trim()}</option>)}
         </select>
         <button onClick={()=>{if(moveVer)onMove(moveVer);setMoveVer('');}} disabled={!moveVer}
           className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md border-2 font-bold ${moveVer?'bg-blue-600 text-white border-blue-700 hover:bg-blue-700':'bg-neutral-200 text-neutral-400 border-neutral-300 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600 cursor-not-allowed'}`}>
@@ -309,7 +309,27 @@ export default function AosPage() {
   return (<div className="space-y-6">
     <div>
       <h1 className="text-xl font-bold text-gray-900 dark:text-white">서버</h1>
-      {selectedVer && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
+      {selectedVer && (() => {
+        const pure = stripVersionLabel(selectedVer);
+        const verObj = allVersions.find(v => v.version === selectedVer || stripVersionLabel(v.version) === pure);
+        const isCompleted = !!verObj?.is_current;
+        const completedAt = (verObj as any)?.completed_at;
+        const completedDate = completedAt ? (() => {
+          const d = new Date(completedAt);
+          const kst = new Date(d.getTime() + 9*60*60*1000);
+          return String(kst.getUTCFullYear()).slice(2)+'.'+String(kst.getUTCMonth()+1).padStart(2,'0')+'.'+String(kst.getUTCDate()).padStart(2,'0');
+        })() : null;
+        return (
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+            선택 버전: <span className="font-semibold text-gray-700 dark:text-gray-300">{pure}</span>
+            {isCompleted && completedDate && (
+              <span style={{marginLeft:'6px',fontSize:'10px',fontWeight:700,padding:'1px 6px',borderRadius:'3px',border:'1.5px solid #6b7280',color:'#6b7280',backgroundColor:'rgba(107,114,128,0.1)'}}>
+                업데이트 완료: {completedDate}
+              </span>
+            )}
+          </p>
+        );
+      })()}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
