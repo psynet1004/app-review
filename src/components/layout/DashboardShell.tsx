@@ -49,20 +49,22 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       const incomplete = vs.filter(v => !v.is_current);
       return incomplete[incomplete.length - 1]?.version || vs[0]?.version || '';
     };
-    // 순수 버전명으로 비교: "V51.0.7 (다음 업데이트)" 토글 시에도 현재 선택 유지
-    const pureMatch = (vs: AppVersion[], prev: string) => {
-      const purePrev = prev.replace(/\s*\(.*?\)\s*/g, '').trim();
-      return vs.some(v => v.version === prev || v.version.replace(/\s*\(.*?\)\s*/g, '').trim() === purePrev);
-    };
-    setAosVersion(prev =>
-      prev && pureMatch(aosVs, prev) ? prev : activeVer(aosVs)
-    );
-    setIosVersion(prev =>
-      prev && pureMatch(iosVs, prev) ? prev : activeVer(iosVs)
-    );
-    setServerVersion(prev =>
-      prev && pureMatch(serverVs, prev) ? prev : activeVer(serverVs)
-    );
+    // 순수 버전명(괄호 제거)으로 비교: 버전명 수정/다음업데이트 토글 시에도 선택 유지
+    const pureName = (s: string) => s.replace(/\s*\(.*?\)\s*/g, "").trim();
+    const matchVer = (vs: AppVersion[], prev: string) =>
+      vs.find(v => v.version === prev || pureName(v.version) === pureName(prev));
+    setAosVersion(prev => {
+      const matched = prev && matchVer(aosVs, prev);
+      return matched ? matched.version : activeVer(aosVs);
+    });
+    setIosVersion(prev => {
+      const matched = prev && matchVer(iosVs, prev);
+      return matched ? matched.version : activeVer(iosVs);
+    });
+    setServerVersion(prev => {
+      const matched = prev && matchVer(serverVs, prev);
+      return matched ? matched.version : activeVer(serverVs);
+    });
   }, [supabase]);
 
   useEffect(() => {
