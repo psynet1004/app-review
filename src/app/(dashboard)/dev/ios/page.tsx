@@ -408,7 +408,11 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
     ss(false);onSaved();
   };
   const crossBar=!editId&&<div className="flex items-center gap-2">{OTHER_PLATFORMS.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none group"><input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="sr-only"/><span className={`relative flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full border-2 transition-all duration-300 ${crossWith.includes(cp)?'bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.6)] animate-pulse':'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 text-neutral-400 dark:text-neutral-500'}`}><span className={`inline-block w-3.5 h-3.5 rounded border-2 flex-shrink-0 transition-all duration-200 ${crossWith.includes(cp)?'bg-white border-white':'border-current'}`}>{crossWith.includes(cp)&&<svg viewBox="0 0 10 10" className="w-full h-full text-blue-600"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</span>{cp} 함께</span></label>)}</div>||undefined;
-  const isDevDirty=!editId&&(f.menu_item.trim()!==''||f.description.trim()!==''||f.note.trim()!==''||f.planning_link_url.trim()!==''||f.planning_link_name.trim()!==''||f.is_required);
+  const origDev=useRef<any>(null);
+  useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)origDev.current={menu_item:data.menu_item||'',description:data.description||'',note:data.note||'',planning_link_url:data.planning_link_url||'',planning_link_name:data.planning_link_name||'',is_required:data.is_required||false};});},[editId]);
+  const isDevDirty=editId
+    ?(origDev.current&&(f.menu_item!==origDev.current.menu_item||f.description!==origDev.current.description||f.note!==origDev.current.note||f.planning_link_url!==origDev.current.planning_link_url||f.planning_link_name!==origDev.current.planning_link_name||f.is_required!==origDev.current.is_required))
+    :(f.menu_item.trim()!==''||f.description.trim()!==''||f.note.trim()!==''||f.planning_link_url.trim()!==''||f.planning_link_name.trim()!==''||f.is_required);
   return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose} headerExtra={crossBar} isDirty={isDevDirty}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVersion}/>
@@ -454,7 +458,11 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
     ss(false);onSaved();
   };
   const bugBar=!editId&&BUG_OTHER.length>0&&<div className="flex items-center gap-2">{BUG_OTHER.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={bugCross.includes(cp)} onChange={e=>setBugCross(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="w-4 h-4 rounded accent-blue-500"/><span className={`text-xs font-bold px-2 py-0.5 rounded ${bugCross.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span></label>)}</div>||undefined;
-  const isBugDirty=!editId&&(f.location.trim()!==''||f.description.trim()!==''||f.note.trim()!==''||f.planning_link_url.trim()!==''||f.planning_link_name.trim()!=='');
+  const origBug=useRef<any>(null);
+  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)origBug.current={location:data.location||'',description:data.description||'',note:data.note||'',planning_link_url:data.planning_link_url||'',planning_link_name:data.planning_link_name||''};});},[editId]);
+  const isBugDirty=editId
+    ?(origBug.current&&(f.location!==origBug.current.location||f.description!==origBug.current.description||f.note!==origBug.current.note||f.planning_link_url!==origBug.current.planning_link_url||f.planning_link_name!==origBug.current.planning_link_name))
+    :(f.location.trim()!==''||f.description.trim()!==''||f.note.trim()!==''||f.planning_link_url.trim()!==''||f.planning_link_name.trim()!=='');
   return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose} headerExtra={bugBar} isDirty={isBugDirty}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       {hasPlatform?<Inp l="플랫폼" v={hasPlatform} c={()=>{}} disabled/>:
