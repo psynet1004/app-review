@@ -408,7 +408,8 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
     ss(false);onSaved();
   };
   const crossBar=!editId&&<div className="flex items-center gap-2">{OTHER_PLATFORMS.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none group"><input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="sr-only"/><span className={`relative flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full border-2 transition-all duration-300 ${crossWith.includes(cp)?'bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.6)] animate-pulse':'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 text-neutral-400 dark:text-neutral-500'}`}><span className={`inline-block w-3.5 h-3.5 rounded border-2 flex-shrink-0 transition-all duration-200 ${crossWith.includes(cp)?'bg-white border-white':'border-current'}`}>{crossWith.includes(cp)&&<svg viewBox="0 0 10 10" className="w-full h-full text-blue-600"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</span>{cp} 함께</span></label>)}</div>||undefined;
-  return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose} headerExtra={crossBar}><div className="p-6 space-y-4">
+  const isDevDirty=!editId&&(f.menu_item.trim()!==''||f.description.trim()!==''||f.note.trim()!==''||f.planning_link_url.trim()!==''||f.planning_link_name.trim()!==''||f.is_required);
+  return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose} headerExtra={crossBar} isDirty={isDevDirty}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVersion}/>
       <Inp l="항목명 *" v={f.menu_item} c={v=>sf(p=>({...p,menu_item:v}))}/>
@@ -453,7 +454,8 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
     ss(false);onSaved();
   };
   const bugBar=!editId&&BUG_OTHER.length>0&&<div className="flex items-center gap-2">{BUG_OTHER.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={bugCross.includes(cp)} onChange={e=>setBugCross(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="w-4 h-4 rounded accent-blue-500"/><span className={`text-xs font-bold px-2 py-0.5 rounded ${bugCross.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span></label>)}</div>||undefined;
-  return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose} headerExtra={bugBar}><div className="p-6 space-y-4">
+  const isBugDirty=!editId&&(f.location.trim()!==''||f.description.trim()!==''||f.note.trim()!==''||f.planning_link_url.trim()!==''||f.planning_link_name.trim()!=='');
+  return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose} headerExtra={bugBar} isDirty={isBugDirty}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       {hasPlatform?<Inp l="플랫폼" v={hasPlatform} c={()=>{}} disabled/>:
        table==='bug_items'?<Sel l="플랫폼" v={f.platform} c={v=>sf(p=>({...p,platform:v}))} opts={[{v:'AOS',l:'AOS'},{v:'iOS',l:'iOS'}]}/>:
@@ -478,9 +480,11 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
 }
 
 /* ============ Shared UI ============ */
-function Modal({title,onClose,children,headerExtra}:{title:string;onClose:()=>void;children:React.ReactNode;headerExtra?:React.ReactNode}){return(
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-    <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700"><h2 className="font-bold text-lg text-neutral-900 dark:text-white">{title}</h2><div className="flex items-center gap-3">{headerExtra}{<button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-neutral-200"><X size={20}/></button>}</div></div>{children}</div></div>);}
+function Modal({title,onClose,children,headerExtra,isDirty}:{title:string;onClose:()=>void;children:React.ReactNode;headerExtra?:React.ReactNode;isDirty?:boolean}){
+  const safeClose=()=>{if(isDirty&&!window.confirm('작성 중인 내용이 있습니다.\n창을 닫으면 입력한 내용이 사라집니다.\n그래도 닫으시겠습니까?'))return;onClose();};
+  return(
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={safeClose}><div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+    <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700"><h2 className="font-bold text-lg text-neutral-900 dark:text-white">{title}</h2><div className="flex items-center gap-3">{headerExtra}{<button onClick={safeClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-neutral-200"><X size={20}/></button>}</div></div>{children}</div></div>);}
 function Foot({editId,onDel,onClose,onSave,saving}:any){return(
   <div className="flex justify-between px-6 py-4 border-t bg-gray-50">{editId?<button onClick={onDel} className="text-red-500 hover:text-red-700 text-sm font-medium">삭제</button>:<div/>}
     <div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button><button onClick={onSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>);}
