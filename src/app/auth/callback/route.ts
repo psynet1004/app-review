@@ -11,7 +11,7 @@ const ALLOWED_EMAILS = [
   'dbstlrchl@psynet.co.kr','dklim@psynet.co.kr','heuswing@psynet.co.kr','mcyang@psynet.co.kr',
   'annasui89@psynet.co.kr','somin99@psynet.co.kr','wndydthdyd@psynet.co.kr',
   'humancom@psynet.co.kr','jaebin9810@psynet.co.kr','parkkn@psynet.co.kr','poohsik@psynet.co.kr','probe35331@psynet.co.kr',
-  'kjs@psynet.co.kr','jh@psynet.co.kr','pommier19@psynet.co.kr',
+  'kjs@psynet.co.kr','jh@psynet.co.kr','pommier19@psynet.co.kr','hspark@psynet.co.kr',
 ];
 
 export async function GET(request: Request) {
