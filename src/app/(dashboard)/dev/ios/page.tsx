@@ -3,12 +3,13 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import DataTable from '@/components/table/DataTable';
 import { StatusBadge, PriorityTag } from '@/components/common/StatusBadge';
-import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
-import { useVersion, stripVersionLabel } from '@/components/layout/Header';
+import { Send, Plus, X, ArrowRightLeft, ChevronDown, ChevronUp, MessageCircle, ClipboardList } from 'lucide-react';
+import { useVersion } from '@/components/layout/Header';
 import type { DevStatus, FixStatus, Priority, ReviewStatus } from '@/lib/types/database';
 import { CommentChat, CommentBadge } from '@/components/common/CommentChat';
 import { QAResultBadge, isQAComplete } from '@/components/common/QAResult';
 import { InlineDevSel } from '@/components/common/InlineDevSel';
+import ChecklistModal, { type ChecklistItem } from '@/components/common/ChecklistModal';
 
 const PLATFORM = 'iOS';
 const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
@@ -16,14 +17,16 @@ const EXCLUDED_DEPTS = ['서버(시스템)','재무','데이터/광고','AIAE','
 
 export default function AosPage() {
   const supabase = createClient();
-  const { iosVersion: selectedVer, iosVersions: allVersions, aosVersion, serverVersion, userName, userDept, userEmail } = useVersion();
+  const { iosVersion: selectedVer, iosVersions: allVersions, userName, userDept, userEmail } = useVersion();
   const [rawDev, setRawDev] = useState<any[]>([]);
   const [rawBug, setRawBug] = useState<any[]>([]);
   const [rawCommon, setRawCommon] = useState<any[]>([]);
   const [rawServer, setRawServer] = useState<any[]>([]);
   const [developers, setDevelopers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const isPM = userEmail === 'boongss@psynet.co.kr' || userDept === '운영' || userDept === 'PM';
   const [showForm, setShowForm] = useState<{type:'dev'|'bug'|'common'|'server';id?:string}|null>(null);
+  const [checklistModal, setChecklistModal] = useState<{devItemId:string;mode:'edit'|'confirm'}|null>(null);
   const [collapsed, setCollapsed] = useState<Record<string,boolean>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string,number>>({});
   const [commentNew, setCommentNew] = useState<Record<string,boolean>>({});
@@ -72,40 +75,24 @@ export default function AosPage() {
   ),[developers]);
 
   const filterVer = useCallback((items: any[], statusField: string) => {
-    const pureSelectedVer = stripVersionLabel(selectedVer);
-    if (!pureSelectedVer) return items;
-    const thisVer = items.filter(i => stripVersionLabel(i.version) === pureSelectedVer);
+    if (!selectedVer) return items;
+    const thisVer = items.filter(i => i.version === selectedVer);
     const verList = allVersions.map(v => v.version);
-    const pureVerList = verList.map(v => stripVersionLabel(v));
-    const curIdx = pureVerList.indexOf(pureSelectedVer);
-    const olderVers = curIdx >= 0 ? pureVerList.slice(curIdx + 1) : [];
+    const curIdx = verList.indexOf(selectedVer);
+    const olderVers = curIdx >= 0 ? verList.slice(curIdx + 1) : [];
     const incomplete = statusField === 'dev_status'
       ? ['대기','개발중','보류']
       : ['미수정','수정중','보류'];
     const carried = items
-      .filter(i => olderVers.includes(stripVersionLabel(i.version)) && incomplete.includes(i[statusField]))
+      .filter(i => olderVers.includes(i.version) && incomplete.includes(i[statusField]))
       .map(i => ({ ...i, _carried: true, _origVer: i.version }));
     return [...thisVer, ...carried];
   }, [selectedVer, allVersions]);
 
-  const devItems = useMemo(() => {
-    const items = filterVer(rawDev, 'dev_status');
-    const done = (i:any) => i.dev_status==='배포완료' && i.review_status==='검수완료' && isQAComplete(i);
-    return [...items.filter(i=>!done(i)), ...items.filter(i=>done(i))];
-  }, [rawDev, filterVer]);
-  const bugItems = useMemo(() => {
-    const items = filterVer(rawBug, 'fix_status');
-    const done = (i:any) => (i.fix_status==='수정완료'||i.fix_status==='배포완료') && i.review_status==='검수완료' && isQAComplete(i);
-    return [...items.filter(i=>!done(i)), ...items.filter(i=>done(i))];
-  }, [rawBug, filterVer]);
-  const commonItems = useMemo(() => {
-    const done = (i:any) => (i.fix_status==='수정완료'||i.fix_status==='배포완료') && i.review_status==='검수완료' && isQAComplete(i);
-    return [...rawCommon.filter(i=>!done(i)), ...rawCommon.filter(i=>done(i))];
-  }, [rawCommon]);
-  const serverItems = useMemo(() => {
-    const done = (i:any) => (i.fix_status==='수정완료'||i.fix_status==='배포완료') && i.review_status==='검수완료' && isQAComplete(i);
-    return [...rawServer.filter(i=>!done(i)), ...rawServer.filter(i=>done(i))];
-  }, [rawServer]);
+  const devItems = useMemo(() => filterVer(rawDev, 'dev_status'), [rawDev, filterVer]);
+  const bugItems = useMemo(() => filterVer(rawBug, 'fix_status'), [rawBug, filterVer]);
+  const commonItems = useMemo(() => rawCommon, [rawCommon]);
+  const serverItems = useMemo(() => rawServer, [rawServer]);
 
   const toggle = (k:string) => setCollapsed(p=>({...p,[k]:!p[k]}));
   const closeForm=()=>setShowForm(null);
@@ -154,7 +141,16 @@ export default function AosPage() {
 
   // 개발항목 검수상태 인라인 변경
   const handleDevReviewChange = async(id:string, val:ReviewStatus) => {
+    if(val === '검수완료'){
+      setChecklistModal({devItemId:id, mode:'confirm'});
+      return;
+    }
     await supabase.from('dev_items').update({review_status:val}).eq('id',id);
+    loadData();
+  };
+  const confirmReviewComplete = async(devItemId:string) => {
+    await supabase.from('dev_items').update({review_status:'검수완료'}).eq('id',devItemId);
+    setChecklistModal(null);
     loadData();
   };
   const DevReviewSel = ({item}:{item:any}) => (
@@ -185,7 +181,7 @@ export default function AosPage() {
   const isDevReviewed = (item:any) => item.dev_status==='배포완료' && item.review_status==='검수완료' && isQAComplete(item);
 
   const devCols = [
-    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{stripVersionLabel(i.version)}<CarriedBadge item={i}/></div>},
+    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
     {key:'menu_item',label:'항목',sortable:true,render:(i:any)=><div><button onClick={()=>setShowForm({type:'dev',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isDevReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.menu_item}</button>
       {i.planning_link_url && <a href={i.planning_link_url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="ml-1.5 inline-flex items-center gap-1 text-[11px] text-white dark:text-black font-bold bg-blue-600 dark:bg-blue-400 hover:bg-blue-700 dark:hover:bg-blue-500 px-2 py-0.5 rounded border-2 border-blue-700 dark:border-blue-500 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] hover:shadow-none transition-all">🔗 {i.planning_link_name||'링크'}</a>}
     </div>},
@@ -202,7 +198,7 @@ export default function AosPage() {
   ];
 
   const bugCols = [
-    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{stripVersionLabel(i.version)}<CarriedBadge item={i}/></div>},
+    {key:'version',label:'버전',width:'w-28',sortable:true, render:(i:any)=><div className="flex items-center">{i.version}<CarriedBadge item={i}/></div>},
     {key:'priority',label:'우선순위',width:'w-24',sortable:true,align:'center' as const,render:(i:any)=><PriorityTag priority={i.priority}/>},
     {key:'location',label:'위치',sortable:true,render:(i:any)=><div><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-neutral-900 dark:text-white hover:underline font-medium text-left ${isReviewed(i)?'line-through decoration-red-500 text-neutral-400 dark:text-neutral-600':''}`}>{i.location}</button>{i.planning_link_url && <a href={i.planning_link_url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="ml-1.5 inline-flex items-center gap-1 text-[11px] text-white dark:text-black font-bold bg-blue-600 dark:bg-blue-400 hover:bg-blue-700 dark:hover:bg-blue-500 px-2 py-0.5 rounded border-2 border-blue-700 dark:border-blue-500 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] hover:shadow-none transition-all">🔗 {i.planning_link_name||'링크'}</a>}</div>},
     {key:'description',label:'설명',width:'',render:(i:any)=><button onClick={()=>setShowForm({type:'bug',id:i.id})} className={`text-neutral-500 dark:text-white text-xs text-left whitespace-pre-wrap hover:underline cursor-pointer ${isReviewed(i)?'line-through decoration-red-500':''}`}>{i.description||'-'}</button>},
@@ -294,7 +290,7 @@ export default function AosPage() {
         <select value={moveVer} onChange={e=>setMoveVer(e.target.value)} onClick={e=>e.stopPropagation()}
           className="text-xs border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-black dark:text-white rounded-md px-2 py-1 font-bold focus:border-black dark:focus:border-white focus:outline-none">
           <option value="">버전 선택</option>
-          {versionList.map(v=><option key={v} value={v}>{v.replace(/\s*\(.*?\)\s*/g,"").trim()}</option>)}
+          {versionList.map(v=><option key={v} value={v}>{v}</option>)}
         </select>
         <button onClick={()=>{if(moveVer)onMove(moveVer);setMoveVer('');}} disabled={!moveVer}
           className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md border-2 font-bold ${moveVer?'bg-blue-600 text-white border-blue-700 hover:bg-blue-700':'bg-neutral-200 text-neutral-400 border-neutral-300 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600 cursor-not-allowed'}`}>
@@ -309,27 +305,7 @@ export default function AosPage() {
   return (<div className="space-y-6">
     <div>
       <h1 className="text-xl font-bold text-gray-900 dark:text-white">iOS</h1>
-      {selectedVer && (() => {
-        const pure = stripVersionLabel(selectedVer);
-        const verObj = allVersions.find(v => v.version === selectedVer || stripVersionLabel(v.version) === pure);
-        const isCompleted = !!verObj?.is_current;
-        const completedAt = (verObj as any)?.completed_at;
-        const completedDate = completedAt ? (() => {
-          const d = new Date(completedAt);
-          const kst = new Date(d.getTime() + 9*60*60*1000);
-          return String(kst.getUTCFullYear()).slice(2)+'.'+String(kst.getUTCMonth()+1).padStart(2,'0')+'.'+String(kst.getUTCDate()).padStart(2,'0');
-        })() : null;
-        return (
-          <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-            선택 버전: <span className="font-semibold text-gray-700 dark:text-gray-300">{pure}</span>
-            {isCompleted && completedDate && (
-              <span style={{marginLeft:'6px',fontSize:'10px',fontWeight:700,padding:'1px 6px',borderRadius:'3px',border:'1.5px solid #6b7280',color:'#6b7280',backgroundColor:'rgba(107,114,128,0.1)'}}>
-                업데이트 완료: {completedDate}
-              </span>
-            )}
-          </p>
-        );
-      })()}
+      {selectedVer && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">선택 버전: <span className="font-semibold text-gray-700">{selectedVer}</span></p>}
     </div>
 
     <div className="rounded-lg border-2 border-black dark:border-neutral-700 shadow-[3px_3px_0_0_rgba(0,0,0,1)] dark:shadow-[3px_3px_0_0_rgba(255,255,255,0.05)] overflow-hidden">
@@ -382,38 +358,48 @@ export default function AosPage() {
         toolbar={<SendBar ids={selServer} onSend={()=>handleSend('server',selServer)} onDelete={()=>handleBulkDel('server',selServer)} onMove={(ver:string)=>handleVersionMove('server',selServer,ver)}/>}/></>}
     </div>
 
-    {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)} crossVersions={{'AOS':aosVersion,'SERVER':serverVersion}}/>}
+    {showForm?.type==='dev'&&<DevForm supabase={supabase} devTeam={devTeam} editId={showForm.id} platform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} isPM={isPM} userEmail={userEmail} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('dev',id)}/>}
     {showForm?.type==='bug'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="bug_items" hasPlatform={PLATFORM} defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('bug',id)}/>}
     {showForm?.type==='common'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="common_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('common',id)}/>}
     {showForm?.type==='server'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="server_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('server',id)}/>}
     {showComment&&<CommentChat itemId={showComment.id} itemType={showComment.type as any} itemTitle={showComment.title} onClose={()=>setShowComment(null)} onCommentAdded={loadData}/>}
+    {checklistModal&&<ChecklistModal mode={checklistModal.mode} devItemId={checklistModal.devItemId} isPM={isPM} userEmail={userEmail} onClose={()=>setChecklistModal(null)} onConfirm={()=>confirmReviewComplete(checklistModal.devItemId)}/>}
   </div>);
 }
 
 /* ============ DevForm ============ */
-function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,userName,userDept,onClose,onSaved,onDel,crossVersions}:any){
+function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,userName,userDept,isPM,userEmail,onClose,onSaved,onDel}:any){
   const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_ids:'',dev_status:'대기' as DevStatus,review_status:'검수전' as ReviewStatus,planning_link_url:'',planning_link_name:'',note:''});
   const [saving,ss]=useState(false);
+  const [pendingChecklist,setPendingChecklist]=useState<ChecklistItem[]|null>(null);
+  const [showChecklist,setShowChecklist]=useState(false);
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_ids:data.developer_ids||data.developer_id||'',dev_status:data.dev_status||'대기',review_status:data.review_status||'검수전',planning_link_name:data.planning_link_name||'',planning_link_url:data.planning_link_url||'',note:data.note||''});});},[editId]);
   const OTHER_PLATFORMS = platform==='AOS'?['iOS','SERVER']:platform==='iOS'?['AOS','SERVER']:['AOS','iOS'];
-  const [crossWith,setCrossWith]=useState<string[]>(OTHER_PLATFORMS);
+  const [crossWith,setCrossWith]=useState<string[]>([]);
   const save=async()=>{
     if(!f.menu_item.trim()){alert('항목명 필수');return;}
     ss(true);
-    const devIds = Array.isArray(f.developer_ids) ? (f.developer_ids.length > 0 ? f.developer_ids : null) : (f.developer_ids && f.developer_ids !== '' ? [f.developer_ids] : null);
-    const p:any={...f,platform,developer_ids:devIds,developer_id:null};
+    const p:any={...f,platform,developer_ids:f.developer_ids||null,developer_id:null};
     if(editId)await supabase.from('dev_items').update(p).eq('id',editId);
-    else{delete p.review_status;await supabase.from('dev_items').insert(p);for(const cp of crossWith){const cpVer=(crossVersions&&crossVersions[cp])||p.version;await supabase.from('dev_items').insert({...p,platform:cp,version:cpVer});}}
+    else{
+      delete p.review_status;
+      const {data:newItem}=await supabase.from('dev_items').insert(p).select('id').single();
+      if(newItem?.id){
+        const checklistToSave=pendingChecklist||[];
+        for(const it of checklistToSave){
+          await supabase.from('dev_item_checklists').insert({dev_item_id:newItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});
+        }
+        for(const cp of crossWith){
+          const {data:cpItem}=await supabase.from('dev_items').insert({...p,platform:cp}).select('id').single();
+          if(cpItem?.id){for(const it of checklistToSave){await supabase.from('dev_item_checklists').insert({dev_item_id:cpItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});}}
+        }
+      }
+    }
     ss(false);onSaved();
   };
-  const crossBar=!editId&&<div className="flex items-center gap-2">{OTHER_PLATFORMS.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none group"><input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="sr-only"/><span className={`relative flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full border-2 transition-all duration-300 ${crossWith.includes(cp)?'bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.6)] animate-pulse':'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 text-neutral-400 dark:text-neutral-500'}`}><span className={`inline-block w-3.5 h-3.5 rounded border-2 flex-shrink-0 transition-all duration-200 ${crossWith.includes(cp)?'bg-white border-white':'border-current'}`}>{crossWith.includes(cp)&&<svg viewBox="0 0 10 10" className="w-full h-full text-blue-600"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</span>{cp} 함께</span></label>)}</div>||undefined;
-  const origDev=useRef<any>(null);
-  useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)origDev.current={menu_item:data.menu_item||'',description:data.description||'',note:data.note||'',planning_link_url:data.planning_link_url||'',planning_link_name:data.planning_link_name||'',is_required:data.is_required||false};});},[editId]);
-  const isDevDirty=editId
-    ?(origDev.current&&(f.menu_item!==origDev.current.menu_item||f.description!==origDev.current.description||f.note!==origDev.current.note||f.planning_link_url!==origDev.current.planning_link_url||f.planning_link_name!==origDev.current.planning_link_name||f.is_required!==origDev.current.is_required))
-    :(f.menu_item.trim()!==''||f.description.trim()!==''||f.note.trim()!==''||f.planning_link_url.trim()!==''||f.planning_link_name.trim()!==''||f.is_required);
-  return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose} headerExtra={crossBar} isDirty={isDevDirty}><div className="p-6 space-y-4">
+  const crossBar=!editId&&<div className="flex items-center gap-2">{OTHER_PLATFORMS.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="w-4 h-4 rounded accent-blue-500"/><span className={`text-xs font-bold px-2 py-0.5 rounded ${crossWith.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span></label>)}</div>||undefined;
+  return(<Modal title={editId?'개발항목 수정':'개발항목 추가'} onClose={onClose} headerExtra={crossBar}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <VerSel l="버전" v={f.version} c={v=>sf(p=>({...p,version:v}))} versions={versionList} defaultVer={defaultVersion}/>
       <Inp l="항목명 *" v={f.menu_item} c={v=>sf(p=>({...p,menu_item:v}))}/>
@@ -433,6 +419,8 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
       </div>
     </div>
     <label className="flex items-center gap-2.5 text-sm font-bold cursor-pointer select-none"><input type="checkbox" checked={f.is_required} onChange={e=>sf(p=>({...p,is_required:e.target.checked}))} className="w-5 h-5 rounded border-2 border-red-400 text-red-600 focus:ring-red-500 accent-red-600"/><span className={`px-2 py-0.5 rounded-md ${f.is_required ? "bg-red-600 text-white" : "text-neutral-400 dark:text-neutral-300"}`}>{f.is_required ? "⚡ 필수 항목" : "필수 항목"}</span></label>
+    <button type="button" onClick={()=>setShowChecklist(true)} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-blue-300 dark:border-blue-700 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"><ClipboardList className="w-4 h-4"/><span>체크리스트 확인 / 편집</span>{pendingChecklist&&<span className="ml-auto text-xs bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full font-medium">{pendingChecklist.length}개</span>}</button>
+    {showChecklist&&<ChecklistModal mode="edit" devItemId={editId} isPM={isPM} userEmail={userEmail||""} onClose={()=>setShowChecklist(false)} onSaveItems={items=>{setPendingChecklist(items);setShowChecklist(false);}}/>}
     <Inp l="비고" v={f.note} c={v=>sf(p=>({...p,note:v}))} multi/>
   </div><Foot editId={editId} onDel={()=>onDel(editId)} onClose={onClose} onSave={save} saving={saving}/></Modal>);
 }
@@ -448,8 +436,7 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
   const save=async()=>{
     if(!f.location.trim()){alert('위치 필수');return;}
     ss(true);
-    const bugDevIds = Array.isArray(f.developer_ids) ? (f.developer_ids.length > 0 ? f.developer_ids : null) : (f.developer_ids && f.developer_ids !== '' ? [f.developer_ids] : null);
-    const p:any={...f,developer_ids:bugDevIds,developer_id:null};
+    const p:any={...f,developer_ids:f.developer_ids||null,developer_id:null};
     if(table!=='bug_items')delete p.platform;
     if(table==='bug_items'&&hasPlatform)p.platform=hasPlatform;
     if(!editId) delete p.review_status;
@@ -458,12 +445,7 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
     ss(false);onSaved();
   };
   const bugBar=!editId&&BUG_OTHER.length>0&&<div className="flex items-center gap-2">{BUG_OTHER.map(cp=><label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" checked={bugCross.includes(cp)} onChange={e=>setBugCross(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="w-4 h-4 rounded accent-blue-500"/><span className={`text-xs font-bold px-2 py-0.5 rounded ${bugCross.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span></label>)}</div>||undefined;
-  const origBug=useRef<any>(null);
-  useEffect(()=>{if(editId)supabase.from(table).select('*').eq('id',editId).single().then(({data}:any)=>{if(data)origBug.current={location:data.location||'',description:data.description||'',note:data.note||'',planning_link_url:data.planning_link_url||'',planning_link_name:data.planning_link_name||''};});},[editId]);
-  const isBugDirty=editId
-    ?(origBug.current&&(f.location!==origBug.current.location||f.description!==origBug.current.description||f.note!==origBug.current.note||f.planning_link_url!==origBug.current.planning_link_url||f.planning_link_name!==origBug.current.planning_link_name))
-    :(f.location.trim()!==''||f.description.trim()!==''||f.note.trim()!==''||f.planning_link_url.trim()!==''||f.planning_link_name.trim()!=='');
-  return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose} headerExtra={bugBar} isDirty={isBugDirty}><div className="p-6 space-y-4">
+  return(<Modal title={editId?'오류 수정':'오류 추가'} onClose={onClose} headerExtra={bugBar}><div className="p-6 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       {hasPlatform?<Inp l="플랫폼" v={hasPlatform} c={()=>{}} disabled/>:
        table==='bug_items'?<Sel l="플랫폼" v={f.platform} c={v=>sf(p=>({...p,platform:v}))} opts={[{v:'AOS',l:'AOS'},{v:'iOS',l:'iOS'}]}/>:
@@ -488,11 +470,9 @@ function BugForm({supabase,devTeam,editId,table,hasPlatform,defaultVersion,versi
 }
 
 /* ============ Shared UI ============ */
-function Modal({title,onClose,children,headerExtra,isDirty}:{title:string;onClose:()=>void;children:React.ReactNode;headerExtra?:React.ReactNode;isDirty?:boolean}){
-  const safeClose=()=>{if(isDirty&&!window.confirm('작성 중인 내용이 있습니다.\n창을 닫으면 입력한 내용이 사라집니다.\n그래도 닫으시겠습니까?'))return;onClose();};
-  return(
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={safeClose}><div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-    <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700"><h2 className="font-bold text-lg text-neutral-900 dark:text-white">{title}</h2><div className="flex items-center gap-3">{headerExtra}{<button onClick={safeClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-neutral-200"><X size={20}/></button>}</div></div>{children}</div></div>);}
+function Modal({title,onClose,children,headerExtra}:{title:string;onClose:()=>void;children:React.ReactNode;headerExtra?:React.ReactNode}){return(
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}><div className="bg-white dark:bg-neutral-900 rounded-lg border-2 border-black dark:border-neutral-600 shadow-[6px_6px_0_0_rgba(0,0,0,1)] dark:shadow-[6px_6px_0_0_rgba(255,255,255,0.05)] w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+    <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-700"><h2 className="font-bold text-lg text-neutral-900 dark:text-white">{title}</h2><div className="flex items-center gap-3">{headerExtra}{<button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-neutral-200"><X size={20}/></button>}</div></div>{children}</div></div>);}
 function Foot({editId,onDel,onClose,onSave,saving}:any){return(
   <div className="flex justify-between px-6 py-4 border-t bg-gray-50">{editId?<button onClick={onDel} className="text-red-500 hover:text-red-700 text-sm font-medium">삭제</button>:<div/>}
     <div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button><button onClick={onSave} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving?'저장중...':editId?'수정':'추가'}</button></div></div>);}
