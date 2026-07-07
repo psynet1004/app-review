@@ -183,8 +183,8 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
   const checked = items.filter(i => i.is_checked).length;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+    <div className={`fixed inset-0 z-[60] flex items-center justify-center ${mode === 'edit' ? '' : 'bg-black/60'}`} onClick={onClose}>
+      <div className={`relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden ${mode === 'edit' ? 'translate-x-[528px]' : ''}`}
         onClick={e => e.stopPropagation()}>
 
         {/* ── 헤더 ── */}
