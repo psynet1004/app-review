@@ -324,7 +324,7 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
           {mode === 'edit' && <span className="text-xs text-neutral-400">총 {total}개 항목</span>}
           <div className="flex gap-2 ml-auto">
             <button onClick={onClose}
-              className="px-4 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800">
+              className="px-4 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800">
               {mode === 'edit' ? '취소' : '닫기'}
             </button>
             {mode === 'edit' && (

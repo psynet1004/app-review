@@ -372,7 +372,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
   const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_ids:'',dev_status:'대기' as DevStatus,review_status:'검수전' as ReviewStatus,planning_link_url:'',planning_link_name:'',note:''});
   const [saving,ss]=useState(false);
   const [pendingChecklist,setPendingChecklist]=useState<ChecklistItem[]|null>(null);
-  const [showChecklist,setShowChecklist]=useState(false);
+  const [showChecklist,setShowChecklist]=useState(true);
   const OTHER_PLATFORMS = platform==='AOS'?['iOS','SERVER']:platform==='iOS'?['AOS','SERVER']:['AOS','iOS'];
   const [crossWith,setCrossWith]=useState<string[]>([]);
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);

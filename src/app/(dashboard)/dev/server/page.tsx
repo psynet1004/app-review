@@ -363,7 +363,7 @@ function DevForm({supabase,devTeam,editId,platform,defaultVersion,versionList,us
   const [f,sf]=useState({version:defaultVersion||'',menu_item:'',description:'',is_required:false,department:userDept||'',requester:userName||'',developer_ids:'',dev_status:'대기' as DevStatus,review_status:'검수전' as ReviewStatus,planning_link_url:'',planning_link_name:'',note:''});
   const [saving,ss]=useState(false);
   const [pendingChecklist,setPendingChecklist]=useState<ChecklistItem[]|null>(null);
-  const [showChecklist,setShowChecklist]=useState(false);
+  const [showChecklist,setShowChecklist]=useState(true);
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept}));}},[userName,userDept,editId]);
   useEffect(()=>{if(editId)supabase.from('dev_items').select('*').eq('id',editId).single().then(({data}:any)=>{if(data)sf({version:data.version||'',menu_item:data.menu_item||'',description:data.description||'',is_required:data.is_required||false,department:data.department||'',requester:data.requester||'',developer_ids:data.developer_ids||data.developer_id||'',dev_status:data.dev_status||'대기',review_status:data.review_status||'검수전',planning_link_name:data.planning_link_name||'',planning_link_url:data.planning_link_url||'',note:data.note||''});});},[editId]);
   const OTHER_PLATFORMS = platform==='AOS'?['iOS','SERVER']:platform==='iOS'?['AOS','SERVER']:['AOS','iOS'];
