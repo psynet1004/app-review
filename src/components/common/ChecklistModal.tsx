@@ -241,9 +241,8 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
                             <input
                               type="checkbox"
                               checked={item.is_checked}
-                              onChange={() => mode === 'edit' ? undefined : toggleCheck(globalIdx)}
-                              disabled={mode === 'edit'}
-                              className="w-4 h-4 mt-0.5 accent-green-500 shrink-0 cursor-pointer disabled:cursor-default"
+                              onChange={() => toggleCheck(globalIdx)}
+                              className="w-4 h-4 mt-0.5 accent-green-500 shrink-0 cursor-pointer"
                             />
                             <span className={`flex-1 text-sm ${item.is_checked ? 'text-green-700 dark:text-green-300 line-through' : 'text-neutral-800 dark:text-neutral-200'}`}>
                               {item.label}
@@ -295,7 +294,7 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
                     className="w-full text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-blue-500" />
                   <div className="flex gap-2 justify-end">
                     <button onClick={() => { setShowAddRow(false); setNewLabel(''); setNewSubCategory(''); }}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                      className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800">
                       취소
                     </button>
                     <button onClick={addItem} disabled={!newLabel.trim()}
