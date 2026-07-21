@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useVersion } from '@/components/layout/Header';
 import type { DevStatus, ReviewStatus } from '@/lib/types/database';
 import type { ChecklistItem } from '@/components/common/ChecklistModal';
-import { ChevronLeft, ChevronDown, Plus, Trash2, Lock, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Plus, AlertTriangle } from 'lucide-react';
 
 const PLATFORM = 'SERVER';
 const EXCLUDED_ROLES = ['CTO','상무이사','이사'];
@@ -84,12 +84,8 @@ function ServerItemPage(){
   },[editId]);
   useEffect(()=>{loadChecklist();},[loadChecklist]);
 
-  const deleteChecklistItem = async(idx:number)=>{
-    const item = items[idx];
-    if(item.category!=='PM') return; // 서버/모바일 고정, 삭제 불가
-    if(!isPM) return; // 기획 항목도 PM만 삭제 가능
-    if(item.id){ await supabase.from('dev_item_checklists').delete().eq('id',item.id); }
-    setItems(prev=>prev.filter((_,i)=>i!==idx));
+  const toggleChecklistItem = (idx:number)=>{
+    setItems(prev=>prev.map((it,i)=>i===idx?{...it,excluded:!it.excluded}:it));
   };
   const addChecklistItem = ()=>{
     if(!newLabel.trim())return;
@@ -104,21 +100,24 @@ function ServerItemPage(){
     const p:any={...f,platform:PLATFORM,developer_ids:f.developer_ids||null,developer_id:null};
     if(editId){
       await supabase.from('dev_items').update(p).eq('id',editId);
-      // 신규 추가된 체크리스트만 insert (삭제는 이미 즉시 반영됨)
-      const newOnes = items.filter(i=>i.isNew);
-      for(const it of newOnes){
-        await supabase.from('dev_item_checklists').insert({dev_item_id:editId,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});
+      for(const it of items){
+        if(it.isNew && !it.excluded){
+          await supabase.from('dev_item_checklists').insert({dev_item_id:editId,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});
+        }else if(!it.isNew && it.excluded && it.id){
+          await supabase.from('dev_item_checklists').delete().eq('id',it.id);
+        }
       }
     }else{
       delete p.review_status;
       const {data:newItem}=await supabase.from('dev_items').insert(p).select('id').single();
+      const includedItems = items.filter(it=>!it.excluded);
       if(newItem?.id){
-        for(const it of items){
+        for(const it of includedItems){
           await supabase.from('dev_item_checklists').insert({dev_item_id:newItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});
         }
         for(const cp of crossWith){
           const {data:cpItem}=await supabase.from('dev_items').insert({...p,platform:cp}).select('id').single();
-          if(cpItem?.id){for(const it of items){await supabase.from('dev_item_checklists').insert({dev_item_id:cpItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});}}
+          if(cpItem?.id){for(const it of includedItems){await supabase.from('dev_item_checklists').insert({dev_item_id:cpItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});}}
         }
       }
     }
@@ -212,18 +211,12 @@ function ServerItemPage(){
                         {subKey!=='__none__' && <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 pl-1 mt-2">{subKey}</p>}
                         {subItems.map((item)=>{
                           const globalIdx = items.indexOf(item);
-                          const canDelete = item.category==='PM' && isPM;
+                          const included = !item.excluded;
                           return (
-                            <div key={globalIdx} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800">
-                              <span className="flex-1 text-sm text-neutral-800 dark:text-neutral-200">{item.label}</span>
-                              {canDelete ? (
-                                <button onClick={()=>deleteChecklistItem(globalIdx)} className="p-1 rounded text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0">
-                                  <Trash2 className="w-3.5 h-3.5"/>
-                                </button>
-                              ) : (
-                                <Lock className="w-3 h-3 text-neutral-300 shrink-0 mt-0.5"/>
-                              )}
-                            </div>
+                            <label key={globalIdx} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${included?'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800':'border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40'}`}>
+                              <input type="checkbox" checked={included} onChange={()=>toggleChecklistItem(globalIdx)} className="w-4 h-4 rounded accent-blue-500 shrink-0"/>
+                              <span className={`flex-1 text-sm ${included?'text-neutral-800 dark:text-neutral-200':'text-neutral-400 dark:text-neutral-600 line-through'}`}>{item.label}</span>
+                            </label>
                           );
                         })}
                       </div>

@@ -15,6 +15,7 @@ export interface ChecklistItem {
   checked_at?: string;
   sort_order: number;
   isNew?: boolean;      // 신규 추가(미저장) 항목
+  excluded?: boolean;   // 구성 단계에서 이 개발항목에서 제외됨 (클라이언트 전용 플래그)
 }
 
 interface Props {
