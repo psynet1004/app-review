@@ -194,7 +194,7 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
   };
 
   // ── confirm 모드: 전체 체크 확인 후 검수완료 확정 ──────────
-  const allChecked = items.length > 0 && items.every(i => i.is_checked);
+  const allChecked = items.every(i => i.is_checked);
 
   const handleConfirm = async () => {
     if (!allChecked) return;
