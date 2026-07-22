@@ -2,6 +2,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, Plus, Trash2, AlertTriangle, CheckCircle2, Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { QA_CATEGORIES } from '@/lib/types/database';
+
+const QA_OPTIONS: { v: string; l: string; color: string }[] = [
+  { v: '', l: '-', color: 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500' },
+  { v: '검수중', l: '검수중', color: 'bg-green-600 text-white' },
+  { v: '검수완료', l: '검수완료', color: 'bg-amber-700 text-white' },
+  { v: '재수정', l: '재수정', color: 'bg-red-700 text-white' },
+  { v: '출시검수', l: '출시검수', color: 'bg-purple-600 text-white' },
+  { v: '미해당', l: '미해당', color: 'bg-neutral-500 text-white' },
+];
 
 // ── 타입 ──────────────────────────────────────────────────────
 export interface ChecklistItem {
@@ -61,6 +71,22 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
   const [newCategory, setNewCategory] = useState<'PM'|'서버'|'모바일'>('PM');
   const [newSubCategory, setNewSubCategory] = useState('');
   const [showAddRow, setShowAddRow] = useState(false);
+  const [qaResults, setQaResults] = useState<Record<string, string>>({});
+
+  // ── 검수결과(qa_results) 로드 (confirm 모드) ────────────────
+  useEffect(() => {
+    if (mode === 'confirm' && devItemId) {
+      supabase.from('dev_items').select('qa_results').eq('id', devItemId).single()
+        .then(({ data }: any) => setQaResults(data?.qa_results || {}));
+    }
+  }, [mode, devItemId, supabase]);
+
+  const handleQaChange = async (cat: string, val: string) => {
+    if (!devItemId) return;
+    const next = { ...qaResults, [cat]: val };
+    setQaResults(next);
+    await supabase.from('dev_items').update({ qa_results: next }).eq('id', devItemId);
+  };
 
   // ── 데이터 로드 ────────────────────────────────────────────
   const loadItems = useCallback(async () => {
@@ -216,8 +242,30 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
           </div>
         </div>
 
+        {/* ── 검수결과 (confirm 모드, 팝업 상단) ── */}
+        {mode === 'confirm' && (
+          <div className="shrink-0 mx-4 mt-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/40 px-4 py-3">
+            <p className="text-xs font-black text-neutral-600 dark:text-neutral-400 mb-2">검수결과</p>
+            <div className="grid grid-cols-3 gap-x-3 gap-y-1.5">
+              {QA_CATEGORIES.map((cat: string) => {
+                const val = qaResults[cat] || '';
+                const opt = QA_OPTIONS.find(o => o.v === val) || QA_OPTIONS[0];
+                return (
+                  <div key={cat} className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 whitespace-nowrap">{cat}</span>
+                    <select value={val} onChange={e => handleQaChange(cat, e.target.value)}
+                      className={`text-[11px] font-bold rounded px-1.5 py-1 border-transparent focus:ring-1 focus:ring-blue-500 ${opt.color}`}>
+                      {QA_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── 체크리스트 본문 ── */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
           {loading ? (
             <div className="text-center py-10 text-neutral-400 text-sm">불러오는 중...</div>
           ) : items.length === 0 ? (
