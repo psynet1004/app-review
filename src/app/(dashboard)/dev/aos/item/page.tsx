@@ -41,8 +41,8 @@ function AosItemPage(){
   const { aosVersion: selectedVer, aosVersions: allVersions, iosVersion, iosVersions, serverVersion, serverVersions, userName, userDept, userEmail } = useVersion();
   const isPM = userEmail === 'boongss@psynet.co.kr' || userDept === '운영' || userDept === 'PM';
   const versionList = useMemo(()=>allVersions.map((v:any)=>v.version),[allVersions]);
-  const iosVersionList = useMemo(()=>iosVersions.map((v:any)=>v.version),[iosVersions]);
-  const serverVersionList = useMemo(()=>serverVersions.map((v:any)=>v.version),[serverVersions]);
+  const iosVersionList = useMemo(()=>iosVersions.filter((v:any)=>!v.completed_at).map((v:any)=>v.version),[iosVersions]);
+  const serverVersionList = useMemo(()=>serverVersions.filter((v:any)=>!v.completed_at).map((v:any)=>v.version),[serverVersions]);
   const crossVersionList: Record<string,string[]> = { iOS: iosVersionList, SERVER: serverVersionList };
   const crossDefaultVersion: Record<string,string> = { iOS: iosVersion, SERVER: serverVersion };
 
@@ -170,7 +170,7 @@ function AosItemPage(){
                 </label>
                 {crossWith.includes(cp) && (
                   <select value={crossVersions[cp]||''} onChange={e=>setCrossVersions(prev=>({...prev,[cp]:e.target.value}))}
-                    className="text-xs border border-neutral-300 dark:border-neutral-600 rounded px-1.5 py-1 bg-white dark:bg-neutral-800">
+                    className="text-xs font-medium border-2 border-neutral-400 dark:border-neutral-500 rounded px-2 py-1 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     {crossDefaultVersion[cp] && <option value={crossDefaultVersion[cp]}>{crossDefaultVersion[cp]} (현재)</option>}
                     {crossVersionList[cp].filter(v=>v!==crossDefaultVersion[cp]).map(v=><option key={v} value={v}>{v}</option>)}
                   </select>
