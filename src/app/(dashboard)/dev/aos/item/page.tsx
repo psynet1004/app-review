@@ -38,9 +38,13 @@ function AosItemPage(){
   const router = useRouter();
   const params = useSearchParams();
   const editId = params.get('id') || undefined;
-  const { aosVersion: selectedVer, aosVersions: allVersions, userName, userDept, userEmail } = useVersion();
+  const { aosVersion: selectedVer, aosVersions: allVersions, iosVersion, iosVersions, serverVersion, serverVersions, userName, userDept, userEmail } = useVersion();
   const isPM = userEmail === 'boongss@psynet.co.kr' || userDept === '운영' || userDept === 'PM';
   const versionList = useMemo(()=>allVersions.map((v:any)=>v.version),[allVersions]);
+  const iosVersionList = useMemo(()=>iosVersions.map((v:any)=>v.version),[iosVersions]);
+  const serverVersionList = useMemo(()=>serverVersions.map((v:any)=>v.version),[serverVersions]);
+  const crossVersionList: Record<string,string[]> = { iOS: iosVersionList, SERVER: serverVersionList };
+  const crossDefaultVersion: Record<string,string> = { iOS: iosVersion, SERVER: serverVersion };
 
   const [developers,setDevelopers]=useState<any[]>([]);
   useEffect(()=>{supabase.from('developers').select('*').eq('is_active',true).then(({data}:any)=>setDevelopers(data||[]));},[]);
@@ -55,6 +59,7 @@ function AosItemPage(){
   const [loading,setLoading]=useState(!!editId);
   const OTHER_PLATFORMS = ['iOS','SERVER'];
   const [crossWith,setCrossWith]=useState<string[]>([]);
+  const [crossVersions,setCrossVersions]=useState<Record<string,string>>({});
 
   useEffect(()=>{if(!editId){sf(p=>({...p,requester:p.requester||userName,department:p.department||userDept,version:p.version||selectedVer||''}));}},[userName,userDept,selectedVer,editId]);
   useEffect(()=>{if(editId){
@@ -110,15 +115,19 @@ function AosItemPage(){
       }
     }else{
       delete p.review_status;
-      const {data:newItem}=await supabase.from('dev_items').insert(p).select('id').single();
+      const {data:newItem,error:insErr}=await supabase.from('dev_items').insert(p).select('id').single();
+      if(insErr){alert('저장 실패: '+insErr.message);setSaving(false);return;}
       const includedItems = items.filter(it=>!it.excluded);
       if(newItem?.id){
         for(const it of includedItems){
-          await supabase.from('dev_item_checklists').insert({dev_item_id:newItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});
+          const {error:clErr}=await supabase.from('dev_item_checklists').insert({dev_item_id:newItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});
+          if(clErr)console.error('checklist insert error(main):',clErr.message);
         }
         for(const cp of crossWith){
-          const {data:cpItem}=await supabase.from('dev_items').insert({...p,platform:cp}).select('id').single();
-          if(cpItem?.id){for(const it of includedItems){await supabase.from('dev_item_checklists').insert({dev_item_id:cpItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});}}
+          const cpVersion = crossVersions[cp] || (cp==='iOS' ? iosVersion : cp==='SERVER' ? serverVersion : p.version);
+          const {data:cpItem,error:cpErr}=await supabase.from('dev_items').insert({...p,platform:cp,version:cpVersion}).select('id').single();
+          if(cpErr){alert(`${cp} 함께 등록 실패: `+cpErr.message);continue;}
+          if(cpItem?.id){for(const it of includedItems){const {error:clErr2}=await supabase.from('dev_item_checklists').insert({dev_item_id:cpItem.id,template_id:it.template_id||null,category:it.category,sub_category:it.sub_category||null,label:it.label,is_checked:false,sort_order:it.sort_order});if(clErr2)console.error(`checklist insert error(${cp}):`,clErr2.message);}}
         }
       }
     }
@@ -148,12 +157,25 @@ function AosItemPage(){
           <h1 className="text-lg font-bold text-neutral-900 dark:text-white">{editId?'개발항목 수정':'개발항목 추가'}</h1>
         </div>
         {!editId && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {OTHER_PLATFORMS.map(cp=>(
-              <label key={cp} className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>setCrossWith(prev=>e.target.checked?[...prev,cp]:prev.filter(x=>x!==cp))} className="w-4 h-4 rounded accent-blue-500"/>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded ${crossWith.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span>
-              </label>
+              <div key={cp} className="flex items-center gap-1.5">
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input type="checkbox" checked={crossWith.includes(cp)} onChange={e=>{
+                    const checked = e.target.checked;
+                    setCrossWith(prev=>checked?[...prev,cp]:prev.filter(x=>x!==cp));
+                    if(checked && !crossVersions[cp]) setCrossVersions(prev=>({...prev,[cp]:crossDefaultVersion[cp]||''}));
+                  }} className="w-4 h-4 rounded accent-blue-500"/>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${crossWith.includes(cp)?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-300'}`}>{cp} 함께</span>
+                </label>
+                {crossWith.includes(cp) && (
+                  <select value={crossVersions[cp]||''} onChange={e=>setCrossVersions(prev=>({...prev,[cp]:e.target.value}))}
+                    className="text-xs border border-neutral-300 dark:border-neutral-600 rounded px-1.5 py-1 bg-white dark:bg-neutral-800">
+                    {crossDefaultVersion[cp] && <option value={crossDefaultVersion[cp]}>{crossDefaultVersion[cp]} (현재)</option>}
+                    {crossVersionList[cp].filter(v=>v!==crossDefaultVersion[cp]).map(v=><option key={v} value={v}>{v}</option>)}
+                  </select>
+                )}
+              </div>
             ))}
           </div>
         )}
