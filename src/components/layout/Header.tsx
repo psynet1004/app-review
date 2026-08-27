@@ -89,11 +89,11 @@ export default function Header() {
         <div className="flex items-center gap-3 ml-[100px]">
           <label className="flex items-center gap-2 border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-md px-3 py-1.5 cursor-pointer select-none hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
             <input type="checkbox" checked={!!activeVersionObj?.sangmu_confirmed} onChange={() => handleConfirmClick('sangmu_confirmed')} disabled={!activeVersionObj} className="w-4 h-4 rounded accent-blue-500 disabled:opacity-40" />
-            <span className="text-xs font-bold text-black dark:text-white whitespace-nowrap">기획책임자</span>
+            <span className="text-xs font-bold text-black dark:text-white whitespace-nowrap">기획책임 : 한재성 상무</span>
           </label>
           <label className="flex items-center gap-2 border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-md px-3 py-1.5 cursor-pointer select-none hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
             <input type="checkbox" checked={!!activeVersionObj?.isa_confirmed} onChange={() => handleConfirmClick('isa_confirmed')} disabled={!activeVersionObj} className="w-4 h-4 rounded accent-blue-500 disabled:opacity-40" />
-            <span className="text-xs font-bold text-black dark:text-white whitespace-nowrap">개발책임자</span>
+            <span className="text-xs font-bold text-black dark:text-white whitespace-nowrap">개발책임 : 구광완 이사</span>
           </label>
         </div>
       </div>
