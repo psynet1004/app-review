@@ -63,15 +63,24 @@ export default function Header() {
   const activeSelected = activePlatform === 'iOS' ? ctx.iosVersion : activePlatform === 'SERVER' ? ctx.serverVersion : ctx.aosVersion;
   const activeVersionObj: any = activeVersions.find((v: any) => v.version === activeSelected || stripVersionLabel(v.version) === stripVersionLabel(activeSelected));
 
-  const toggleConfirm = async (field: 'sangmu_confirmed' | 'isa_confirmed') => {
+  const [confirmModal, setConfirmModal] = useState<'sangmu_confirmed' | 'isa_confirmed' | null>(null);
+
+  const toggleConfirm = async (field: 'sangmu_confirmed' | 'isa_confirmed', forceValue?: boolean) => {
     if (!activeVersionObj) return;
-    const next = !activeVersionObj[field];
+    const next = forceValue !== undefined ? forceValue : !activeVersionObj[field];
     const { error } = await supabase.from('app_versions').update({ [field]: next }).eq('id', activeVersionObj.id);
     if (error) { alert('저장 실패: ' + error.message); return; }
     ctx.refreshVersions();
   };
 
+  const handleConfirmClick = (field: 'sangmu_confirmed' | 'isa_confirmed') => {
+    if (!activeVersionObj) return;
+    if (activeVersionObj[field]) { toggleConfirm(field, false); }
+    else { setConfirmModal(field); }
+  };
+
   return (
+    <>
     <header className="h-14 bg-white dark:bg-neutral-900 border-b-[3px] border-black dark:border-neutral-700 flex items-center justify-between px-6 flex-shrink-0 z-10">
       <div className="flex items-center gap-3">
         <VersionDropdown label="AOS" versions={ctx.aosVersions} selected={ctx.aosVersion} onSelect={ctx.setAosVersion} refresh={ctx.refreshVersions} />
@@ -79,11 +88,11 @@ export default function Header() {
         <VersionDropdown label="SERVER" versions={ctx.serverVersions} selected={ctx.serverVersion} onSelect={ctx.setServerVersion} refresh={ctx.refreshVersions} />
         <div className="flex items-center gap-3 ml-[100px]">
           <label className="flex items-center gap-2 border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-md px-3 py-1.5 cursor-pointer select-none hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
-            <input type="checkbox" checked={!!activeVersionObj?.sangmu_confirmed} onChange={() => toggleConfirm('sangmu_confirmed')} disabled={!activeVersionObj} className="w-4 h-4 rounded accent-blue-500 disabled:opacity-40" />
+            <input type="checkbox" checked={!!activeVersionObj?.sangmu_confirmed} onChange={() => handleConfirmClick('sangmu_confirmed')} disabled={!activeVersionObj} className="w-4 h-4 rounded accent-blue-500 disabled:opacity-40" />
             <span className="text-xs font-bold text-black dark:text-white whitespace-nowrap">상무</span>
           </label>
           <label className="flex items-center gap-2 border-2 border-black dark:border-neutral-600 bg-white dark:bg-neutral-800 rounded-md px-3 py-1.5 cursor-pointer select-none hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all">
-            <input type="checkbox" checked={!!activeVersionObj?.isa_confirmed} onChange={() => toggleConfirm('isa_confirmed')} disabled={!activeVersionObj} className="w-4 h-4 rounded accent-blue-500 disabled:opacity-40" />
+            <input type="checkbox" checked={!!activeVersionObj?.isa_confirmed} onChange={() => handleConfirmClick('isa_confirmed')} disabled={!activeVersionObj} className="w-4 h-4 rounded accent-blue-500 disabled:opacity-40" />
             <span className="text-xs font-bold text-black dark:text-white whitespace-nowrap">이사</span>
           </label>
         </div>
@@ -105,6 +114,22 @@ export default function Header() {
         </button>
       </div>
     </header>
+    {confirmModal && (
+      <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center" onClick={() => setConfirmModal(null)}>
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border-2 border-black dark:border-neutral-600 shadow-lg w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+          <p className="text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed mb-6">
+            {confirmModal === 'sangmu_confirmed'
+              ? '사이넷의 기획 책임자로써 현재 개발 / 검수 사항을 모두 확인하였으며, 최종 컨펌을 완료하고 업데이트를 승인하시겠습니까?'
+              : '사이넷의 개발 책임자로써 현재 개발 / 검수 사항을 모두 확인하였으며, 최종 컨펌을 완료하고 업데이트를 승인하시겠습니까?'}
+          </p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setConfirmModal(null)} className="px-4 py-2 text-sm rounded-lg border-2 border-neutral-300 dark:border-neutral-600 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 font-bold">취소</button>
+            <button onClick={async () => { await toggleConfirm(confirmModal, true); setConfirmModal(null); }} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-bold">확인</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
