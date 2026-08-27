@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, createContext, useContext, useRef } from 'react';
 import { LogOut, User, ChevronDown, Plus, Trash2, Moon, Sun, Pencil, Check } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { AppVersion } from '@/lib/types/database';
 import { useDark } from '@/components/layout/DashboardShell';
@@ -56,12 +56,37 @@ export default function Header() {
 
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/login'; };
 
+  // ── 상무/이사 확인 체크박스 (현재 페이지의 플랫폼 + 선택된 버전 기준) ──
+  const pathname = usePathname();
+  const activePlatform: 'AOS' | 'iOS' | 'SERVER' = pathname?.includes('/dev/ios') ? 'iOS' : pathname?.includes('/dev/server') ? 'SERVER' : 'AOS';
+  const activeVersions = activePlatform === 'iOS' ? ctx.iosVersions : activePlatform === 'SERVER' ? ctx.serverVersions : ctx.aosVersions;
+  const activeSelected = activePlatform === 'iOS' ? ctx.iosVersion : activePlatform === 'SERVER' ? ctx.serverVersion : ctx.aosVersion;
+  const activeVersionObj: any = activeVersions.find((v: any) => v.version === activeSelected || stripVersionLabel(v.version) === stripVersionLabel(activeSelected));
+
+  const toggleConfirm = async (field: 'sangmu_confirmed' | 'isa_confirmed') => {
+    if (!activeVersionObj) return;
+    const next = !activeVersionObj[field];
+    const { error } = await supabase.from('app_versions').update({ [field]: next }).eq('id', activeVersionObj.id);
+    if (error) { alert('저장 실패: ' + error.message); return; }
+    ctx.refreshVersions();
+  };
+
   return (
     <header className="h-14 bg-white dark:bg-neutral-900 border-b-[3px] border-black dark:border-neutral-700 flex items-center justify-between px-6 flex-shrink-0 z-10">
       <div className="flex items-center gap-3">
         <VersionDropdown label="AOS" versions={ctx.aosVersions} selected={ctx.aosVersion} onSelect={ctx.setAosVersion} refresh={ctx.refreshVersions} />
         <VersionDropdown label="iOS" versions={ctx.iosVersions} selected={ctx.iosVersion} onSelect={ctx.setIosVersion} refresh={ctx.refreshVersions} />
         <VersionDropdown label="SERVER" versions={ctx.serverVersions} selected={ctx.serverVersion} onSelect={ctx.setServerVersion} refresh={ctx.refreshVersions} />
+        <div className="flex items-center gap-4 ml-[180px]">
+          <label className="flex items-center gap-1.5 text-sm font-bold text-neutral-700 dark:text-neutral-200 cursor-pointer select-none">
+            <input type="checkbox" checked={!!activeVersionObj?.sangmu_confirmed} onChange={() => toggleConfirm('sangmu_confirmed')} disabled={!activeVersionObj} className="w-4 h-4 rounded accent-blue-500 disabled:opacity-40" />
+            상무
+          </label>
+          <label className="flex items-center gap-1.5 text-sm font-bold text-neutral-700 dark:text-neutral-200 cursor-pointer select-none">
+            <input type="checkbox" checked={!!activeVersionObj?.isa_confirmed} onChange={() => toggleConfirm('isa_confirmed')} disabled={!activeVersionObj} className="w-4 h-4 rounded accent-blue-500 disabled:opacity-40" />
+            이사
+          </label>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <button onClick={toggle} className="p-2 rounded-md border-2 border-neutral-300 dark:border-neutral-600 hover:border-black dark:hover:border-white text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-all" title={dark ? '라이트 모드' : '다크 모드'}>
@@ -105,12 +130,16 @@ function VersionDropdown({ label, versions, selected, onSelect, refresh }: {
   const handleEditSave = async (id: string, oldVersion: string) => {
     const trimmed = editVer.trim();
     if (!trimmed || trimmed === oldVersion) { setEditingId(null); return; }
-    await supabase.from('app_versions').update({ version: trimmed }).eq('id', id);
+    const { error: verErr } = await supabase.from('app_versions').update({ version: trimmed }).eq('id', id);
+    if (verErr) { alert('버전명 변경 실패: ' + verErr.message); setEditingId(null); return; }
     for (const t of ['dev_items', 'bug_items']) {
-      await supabase.from(t).update({ version: trimmed }).eq('version', oldVersion).eq('platform', platform);
+      const { error } = await supabase.from(t).update({ version: trimmed }).eq('version', oldVersion).eq('platform', platform);
+      if (error) alert(`${t} 항목 버전 갱신 실패: ` + error.message);
     }
-    await supabase.from('common_bugs').update({ version: trimmed }).eq('version', oldVersion);
-    await supabase.from('server_bugs').update({ version: trimmed }).eq('version', oldVersion);
+    const { error: cbErr } = await supabase.from('common_bugs').update({ version: trimmed }).eq('version', oldVersion);
+    if (cbErr) alert('common_bugs 항목 버전 갱신 실패: ' + cbErr.message);
+    const { error: sbErr } = await supabase.from('server_bugs').update({ version: trimmed }).eq('version', oldVersion);
+    if (sbErr) alert('server_bugs 항목 버전 갱신 실패: ' + sbErr.message);
     setEditingId(null);
     if (selected === oldVersion) onSelect(trimmed);
     refresh();
