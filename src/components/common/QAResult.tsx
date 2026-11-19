@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { QA_CATEGORIES } from "@/lib/types/database";
+import { QA_CATEGORIES, QA_REQUIRED_CATEGORIES } from "@/lib/types/database";
 import type { QAResult } from "@/lib/types/database";
 
 const QA_OPTIONS: { v: QAResult | ""; l: string; color: string }[] = [
@@ -24,11 +24,11 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
   const ref = useRef<HTMLDivElement>(null);
   const qa: Record<string, string> = item.qa_results || {};
 
-  const allDone = QA_CATEGORIES.every(
+  const allDone = QA_REQUIRED_CATEGORIES.every(
     (cat) => qa[cat] === "검수완료" || qa[cat] === "미해당"
   );
   const hasAny = QA_CATEGORIES.some((cat) => qa[cat] && qa[cat] !== "");
-  const doneCount = QA_CATEGORIES.filter(
+  const doneCount = QA_REQUIRED_CATEGORIES.filter(
     (cat) => qa[cat] === "검수완료" || qa[cat] === "미해당"
   ).length;
 
@@ -60,7 +60,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
         className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-2 whitespace-nowrap ${badgeColor} ${needsAttention ? "animate-pulse ring-2 ring-red-400 ring-offset-1" : ""}`}
       >
-        {allDone ? "✓ 완료" : hasAny ? `${doneCount}/${QA_CATEGORIES.length}` : "검수결과"}
+        {allDone ? "✓ 완료" : hasAny ? `${doneCount}/${QA_REQUIRED_CATEGORIES.length}` : "검수결과"}
       </button>
       {open && (
         <>
@@ -103,7 +103,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
 
 export function isQAComplete(item: any): boolean {
   const qa: Record<string, string> = item.qa_results || {};
-  return QA_CATEGORIES.every(
+  return QA_REQUIRED_CATEGORIES.every(
     (cat) => qa[cat] === "검수완료" || qa[cat] === "미해당"
   );
 }

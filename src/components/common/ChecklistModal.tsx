@@ -246,7 +246,7 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
         {mode === 'confirm' && (
           <div className="shrink-0 mx-4 mt-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/40 px-4 py-3">
             <p className="text-xs font-black text-neutral-600 dark:text-neutral-400 mb-2">검수결과</p>
-            <div className="grid grid-cols-3 gap-x-3 gap-y-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5">
               {QA_CATEGORIES.map((cat: string) => {
                 const val = qaResults[cat] || '';
                 const opt = QA_OPTIONS.find(o => o.v === val) || QA_OPTIONS[0];
