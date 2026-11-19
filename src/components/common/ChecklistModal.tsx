@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, Plus, Trash2, AlertTriangle, CheckCircle2, Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { QA_CATEGORIES } from '@/lib/types/database';
+import { getQACategories } from '@/lib/types/database';
 
 const QA_OPTIONS: { v: string; l: string; color: string }[] = [
   { v: '', l: '-', color: 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500' },
@@ -72,6 +72,7 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
   const [newSubCategory, setNewSubCategory] = useState('');
   const [showAddRow, setShowAddRow] = useState(false);
   const [qaResults, setQaResults] = useState<Record<string, string>>({});
+  const [qaPlatform, setQaPlatform] = useState<string | null>(null);
 
   // ── 검수결과(qa_results) 로드 (confirm 모드) ────────────────
   useEffect(() => {
@@ -247,7 +248,7 @@ export default function ChecklistModal({ mode, devItemId, isPM, userEmail, onClo
           <div className="shrink-0 mx-4 mt-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/40 px-4 py-3">
             <p className="text-xs font-black text-neutral-600 dark:text-neutral-400 mb-2">검수결과</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5">
-              {QA_CATEGORIES.map((cat: string) => {
+              {getQACategories(qaPlatform).map((cat: string) => {
                 const val = qaResults[cat] || '';
                 const opt = QA_OPTIONS.find(o => o.v === val) || QA_OPTIONS[0];
                 return (

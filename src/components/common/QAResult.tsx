@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { QA_CATEGORIES, QA_REQUIRED_CATEGORIES } from "@/lib/types/database";
+import { getQACategories, QA_REQUIRED_CATEGORIES } from "@/lib/types/database";
 import type { QAResult } from "@/lib/types/database";
 
 const QA_OPTIONS: { v: QAResult | ""; l: string; color: string }[] = [
@@ -27,7 +27,8 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
   const allDone = QA_REQUIRED_CATEGORIES.every(
     (cat) => qa[cat] === "검수완료" || qa[cat] === "미해당"
   );
-  const hasAny = QA_CATEGORIES.some((cat) => qa[cat] && qa[cat] !== "");
+  const categories = getQACategories(item.platform);
+  const hasAny = categories.some((cat) => qa[cat] && qa[cat] !== "");
   const doneCount = QA_REQUIRED_CATEGORIES.filter(
     (cat) => qa[cat] === "검수완료" || qa[cat] === "미해당"
   ).length;
@@ -71,7 +72,7 @@ export function QAResultBadge({ item, table, onUpdated }: QAResultBadgeProps) {
         >
           <div className="flex items-center justify-between mb-2"><span className="text-xs font-black text-neutral-600 dark:text-neutral-400">검수결과</span><button onClick={() => setOpen(false)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 text-sm font-bold">✕</button></div>
           <div className="flex gap-3">
-            {QA_CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <div key={cat} className="flex flex-col items-center gap-1 min-w-[64px]">
                 <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
                   {cat}

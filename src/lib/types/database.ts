@@ -3,7 +3,13 @@ export type DevStatus = '대기' | '개발중' | '개발완료' | '배포완료'
 export type FixStatus = '미수정' | '수정중' | '수정완료' | '배포완료' | '보류';
 export type ReviewStatus = '검수전' | '검수중' | '검수완료';
 export type QAResult = '검수중' | '검수완료' | '재수정' | '출시검수' | '미해당' | '';
-export const QA_CATEGORIES = ['크로스체크','프리미엄','한국','미국','일본','베트남','Z폴드8','아이폰듀오'] as const;
+export const QA_CATEGORIES = ['크로스체크','프리미엄','한국','미국','일본','베트남'] as const;
+// 플랫폼별 추가 기기 칸: AOS는 Z폴드8, iOS는 아이폰듀오만 보임(그 외는 없음)
+export const QA_DEVICE_BY_PLATFORM: Record<string, string> = { AOS: 'Z폴드8', iOS: '아이폰듀오' };
+export function getQACategories(platform?: string | null): string[] {
+  const dev = platform ? QA_DEVICE_BY_PLATFORM[platform] : undefined;
+  return dev ? [...QA_CATEGORIES, dev] : [...QA_CATEGORIES];
+}
 // 완료 판정에 필요한 칸(기존 6칸). 신규 기기 칸은 입력만 받고 완료 조건에는 넣지 않음
 export const QA_REQUIRED_CATEGORIES = ['크로스체크','프리미엄','한국','미국','일본','베트남'] as const;
 export type Priority = '긴급' | '높음' | '보통' | '낮음';
