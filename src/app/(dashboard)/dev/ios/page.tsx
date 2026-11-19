@@ -367,7 +367,7 @@ export default function AosPage() {
     {showForm?.type==='common'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="common_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('common',id)}/>}
     {showForm?.type==='server'&&<BugForm supabase={supabase} devTeam={devTeam} editId={showForm.id} table="server_bugs" defaultVersion={selectedVer} versionList={versionList} userName={userName} userDept={userDept} onClose={closeForm} onSaved={afterSave} onDel={(id:string)=>handleDel('server',id)}/>}
     {showComment&&<CommentChat itemId={showComment.id} itemType={showComment.type as any} itemTitle={showComment.title} onClose={()=>setShowComment(null)} onCommentAdded={loadData}/>}
-    {checklistModal&&<ChecklistModal mode={checklistModal.mode} devItemId={checklistModal.devItemId} isPM={isPM} userEmail={userEmail} onClose={()=>setChecklistModal(null)} onConfirm={()=>confirmReviewComplete(checklistModal.devItemId)}/>}
+    {checklistModal&&<ChecklistModal platform="iOS" mode={checklistModal.mode} devItemId={checklistModal.devItemId} isPM={isPM} userEmail={userEmail} onClose={()=>setChecklistModal(null)} onConfirm={()=>confirmReviewComplete(checklistModal.devItemId)}/>}
   </div>);
 }
 
